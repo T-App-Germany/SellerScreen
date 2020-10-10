@@ -573,7 +573,7 @@
                                     </WrapPanel>
                                 </Label>
                                 <Label x:Name="AssemblyLbl" Content="AssemblyLbl" HorizontalContentAlignment="Center" FontSize="20" Margin="10"/>
-                                <StackPanel x:Name="CommissioningModePanel" Visibility="Collapsed" Margin="10,50,10,10">
+                                <StackPanel x:Name="InstallationModePanel" Visibility="Collapsed" Margin="10,50,10,10">
                                     <Label Content="Das Programm befindet sich im Einrichtungsmodus. Alle Funktionen sind noch deaktiviert. Führen Sie eine Inbetriebnahme durch!" HorizontalAlignment="Center" FontSize="15"/>
                                     <Button x:Name="StartInstallationBtn" Content="Inbetriebnahme starten" FontSize="25" Margin="10" Padding="10" VerticalAlignment="Top" MaxWidth="500" MinHeight="100" Click="StartInstallationBtn_Click">
                                         <Button.Background>
@@ -1109,7 +1109,7 @@
                                 <Button x:Name="StaticsDayBtn" Content="Einzelner Tag" HorizontalAlignment="Left" Margin="10,0,0,0" VerticalAlignment="Top" Width="120" Height="34" Background="{x:Null}" FontSize="17" BorderBrush="{x:Null}" ToolTip="Statistiken nach Datum anzeigen"/>
                             </StackPanel>
                             <Border x:Name="StaticsActiveMenuBorder" BorderThickness="0" HorizontalAlignment="Left" Height="5" Margin="140,50,0,0" VerticalAlignment="Top" Width="120" Background="#FF0C86FF" RenderTransformOrigin="0.5,0.5"/>
-                            <Grid x:Name="StaticsTotalGrid" Margin="0,70,0,0" Visibility="Collapsed">
+                            <Grid x:Name="StaticsTotalGrid" Margin="0,70,0,0">
                                 <ScrollViewer FontSize="15">
                                     <WrapPanel>
                                         <Border BorderBrush="{Binding Background, ElementName=SeperatorColor}" BorderThickness="2" CornerRadius="3" Margin="10">
@@ -1127,11 +1127,11 @@
                                                         <Label Content="Rücknahmen:" Margin="10,10,0,10"/>
                                                     </StackPanel>
                                                     <StackPanel  Margin="10,0">
-                                                        <Label x:Name="StaticsStartTimeLbl" Content="00.00.0000" Margin="0,10,10,10"/>
-                                                        <Label x:Name="StaticsAllCustomerLbl" Content="0000" Margin="0,10,10,10"/>
-                                                        <Label x:Name="StaticsAllSoldProductsNumberLbl" Content="0000" Margin="0,10,10,10"/>
-                                                        <Label x:Name="StaticsAllGottenCashNumberLbl" Content="0000€" Margin="0,10,10,10"/>
-                                                        <Label x:Name="StaticsAllLostCashNumberLbl" Content="0000€" Margin="0,10,10,10"/>
+                                                        <Label x:Name="StaticsTotalStartTimeLbl" Content="00.00.0000" Margin="0,10,10,10"/>
+                                                        <Label x:Name="StaticsTotalCustomersLbl" Content="0000" Margin="0,10,10,10"/>
+                                                        <Label x:Name="StaticsTotalSoldProductsNumberLbl" Content="0000" Margin="0,10,10,10"/>
+                                                        <Label x:Name="StaticsTotalGottenCashNumberLbl" Content="0000€" Margin="0,10,10,10"/>
+                                                        <Label x:Name="StaticsTotalLostCashNumberLbl" Content="0000€" Margin="0,10,10,10"/>
                                                         <Label x:Name="StaticsAllLostProductsNumberLbl" Content="0000" Margin="0,10,10,10"/>
                                                     </StackPanel>
                                                 </StackPanel>
@@ -1139,62 +1139,78 @@
                                         </Border>
                                         <Border BorderBrush="{Binding Background, ElementName=SeperatorColor}" BorderThickness="2" CornerRadius="3" Margin="10">
                                             <StackPanel>
-                                                <StackPanel Background="{Binding Background, ElementName=SideBarsColor}" Margin="0,0,0,5">
-                                                    <Label Content="Computernutzung" FontSize="20" Margin="10"/>
+                                                <StackPanel Background="{Binding Background, ElementName=SideBarsColor}">
+                                                    <Label Content="Computerzeit" FontSize="20" Margin="10"/>
                                                 </StackPanel>
-                                                <StackPanel Orientation="Horizontal">
-                                                    <StackPanel Orientation="Vertical">
-                                                        <WrapPanel Margin="10">
-                                                            <Label Content="PC-1 Nutzungszeit:"/>
-                                                            <Label x:Name="StaticsTotalPc1TimeLbl" Content="00,00"/>
-                                                            <Label Content="Stunden" Padding="0,5,5,5"/>
-                                                        </WrapPanel>
-                                                        <WrapPanel Margin="10">
-                                                            <Label Content="PC-2 Nutzungszeit:"/>
-                                                            <Label x:Name="StaticsTotalPc2TimeLbl" Content="00,00"/>
-                                                            <Label Content="Stunden" Padding="0,5,5,5"/>
-                                                        </WrapPanel>
-                                                        <Separator/>
-                                                        <WrapPanel Margin="10">
-                                                            <Label Content="PC-1 Benutzer:"/>
-                                                            <Label x:Name="StaticsTotalPc1UserLbl" Content="00"/>
-                                                        </WrapPanel>
-                                                        <WrapPanel Margin="10">
-                                                            <Label Content="PC-2 Benutzer:"/>
-                                                            <Label x:Name="StaticsTotalPc2UserLbl" Content="00"/>
-                                                        </WrapPanel>
-                                                    </StackPanel>
-                                                    <WrapPanel Orientation="Vertical">
-                                                        <Wpf:PieChart Width="170" DisableAnimations="True" Hoverable="False" Height="100" TooltipTimeout="0">
-                                                            <Wpf:PieChart.Series>
-                                                                <Wpf:PieSeries Title="PC-1" Values="50">
-                                                                    <Wpf:PieSeries.Fill>
-                                                                        <SolidColorBrush Color="#FF21CCF2" Opacity="1"/>
-                                                                    </Wpf:PieSeries.Fill>
-                                                                </Wpf:PieSeries>
-                                                                <Wpf:PieSeries Title="PC-2" Values="50">
-                                                                    <Wpf:PieSeries.Fill>
-                                                                        <SolidColorBrush Color="#FF215AF2" Opacity="1"/>
-                                                                    </Wpf:PieSeries.Fill>
-                                                                </Wpf:PieSeries>
-                                                            </Wpf:PieChart.Series>
-                                                        </Wpf:PieChart>
-                                                        <Separator/>
-                                                        <Wpf:PieChart Width="170" DisableAnimations="True" Hoverable="False" Height="100" TooltipTimeout="0">
-                                                            <Wpf:PieChart.Series>
-                                                                <Wpf:PieSeries Title="PC-1" Values="50">
-                                                                    <Wpf:PieSeries.Fill>
-                                                                        <SolidColorBrush Color="#FF22DC4C" Opacity="1"/>
-                                                                    </Wpf:PieSeries.Fill>
-                                                                </Wpf:PieSeries>
-                                                                <Wpf:PieSeries Title="PC-2" Values="50">
-                                                                    <Wpf:PieSeries.Fill>
-                                                                        <SolidColorBrush Color="#FFF29C21" Opacity="1"/>
-                                                                    </Wpf:PieSeries.Fill>
-                                                                </Wpf:PieSeries>
-                                                            </Wpf:PieChart.Series>
-                                                        </Wpf:PieChart>
+                                                <StackPanel>
+                                                    <WrapPanel Orientation="Horizontal">
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <StackPanel Margin="10,10,0,10" Orientation="Vertical">
+                                                                <Label Content="ID" FontWeight="Bold" HorizontalContentAlignment="Center"/>
+                                                                <StackPanel x:Name="StaticsTotalPcPanel" Orientation="Vertical">
+                                                                    <Label x:Name="StaticsTotalPc0SlotLbl" Content="0" FontWeight="Bold" Margin="5" HorizontalContentAlignment="Center"/>
+                                                                </StackPanel>
+                                                            </StackPanel>
+                                                            <StackPanel Margin="10" Orientation="Vertical">
+                                                                <Label Content="PC Name" FontWeight="Bold" HorizontalContentAlignment="Center"/>
+                                                                <StackPanel x:Name="StaticsTotalPcNamePanel" Orientation="Vertical">
+                                                                    <Label x:Name="StaticsTotalPc0NameLbl" Content="Name0" Margin="5" />
+                                                                </StackPanel>
+                                                            </StackPanel>
+                                                            <StackPanel Margin="10" Orientation="Vertical">
+                                                                <Label Content="Benutzer" FontWeight="Bold" HorizontalContentAlignment="Center"/>
+                                                                <StackPanel x:Name="StaticsTotalPcUsersPanel" Orientation="Vertical">
+                                                                    <Label x:Name="StaticsTotalPc0UsersLbl" Content="000" Margin="5" HorizontalContentAlignment="Center"/>
+                                                                </StackPanel>
+                                                            </StackPanel>
+                                                            <StackPanel Margin="10" Orientation="Vertical">
+                                                                <Label Content="Genutze Zeit" FontWeight="Bold" HorizontalContentAlignment="Center"/>
+                                                                <StackPanel x:Name="StaticsTotalPcUsagePanel" Orientation="Vertical">
+                                                                    <Label x:Name="StaticsTotalPc0UsageLbl" Content="0000h" Margin="5" HorizontalContentAlignment="Center"/>
+                                                                </StackPanel>
+                                                            </StackPanel>
+                                                        </StackPanel>
                                                     </WrapPanel>
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <StackPanel>
+                                                            <StackPanel Background="{Binding Background, ElementName=SideBarsColor}">
+                                                                <Label Content="Verkaufte Produkte (Anzahl)" FontSize="18" Margin="5"/>
+                                                            </StackPanel>
+                                                            <Wpf:PieChart x:Name="StaticsTotalPcTimeChart" Margin="10" Width="150" DisableAnimations="True" Hoverable="False" Height="150" TooltipTimeout="0">
+                                                                <Wpf:PieChart.Series>
+                                                                    <Wpf:PieSeries x:Name="StaticsTotalPcTimeChart_PC1" Title="PC-1" Values="50">
+                                                                        <Wpf:PieSeries.Fill>
+                                                                            <SolidColorBrush Color="#FF21CCF2" Opacity="1"/>
+                                                                        </Wpf:PieSeries.Fill>
+                                                                    </Wpf:PieSeries>
+                                                                    <Wpf:PieSeries x:Name="StaticsTotalPcTimeChart_PC2" Title="PC-2" Values="50">
+                                                                        <Wpf:PieSeries.Fill>
+                                                                            <SolidColorBrush Color="#FF215AF2" Opacity="1"/>
+                                                                        </Wpf:PieSeries.Fill>
+                                                                    </Wpf:PieSeries>
+                                                                </Wpf:PieChart.Series>
+                                                            </Wpf:PieChart>
+                                                        </StackPanel>
+                                                        <StackPanel>
+                                                            <StackPanel Background="{Binding Background, ElementName=SideBarsColor}">
+                                                                <Label Content="Einnahmen in € (EUR)" FontSize="18" Margin="5"/>
+                                                            </StackPanel>
+                                                            <Wpf:PieChart x:Name="StaticsTotalPcUsersChart" Margin="10" Width="150" DisableAnimations="True" Hoverable="False" Height="150" TooltipTimeout="0">
+                                                                <Wpf:PieChart.Series>
+                                                                    <Wpf:PieSeries x:Name="StaticsTotalPcUsersChart_PC1" Title="PC-1" Values="50">
+                                                                        <Wpf:PieSeries.Fill>
+                                                                            <SolidColorBrush Color="#FF22DC4C" Opacity="1"/>
+                                                                        </Wpf:PieSeries.Fill>
+                                                                    </Wpf:PieSeries>
+                                                                    <Wpf:PieSeries x:Name="StaticsTotalPcUsersChart_PC2" Title="PC-2" Values="50">
+                                                                        <Wpf:PieSeries.Fill>
+                                                                            <SolidColorBrush Color="#FFF29C21" Opacity="1"/>
+                                                                        </Wpf:PieSeries.Fill>
+                                                                    </Wpf:PieSeries>
+                                                                </Wpf:PieChart.Series>
+                                                            </Wpf:PieChart>
+                                                        </StackPanel>
+                                                    </StackPanel>
                                                 </StackPanel>
                                             </StackPanel>
                                         </Border>
@@ -1297,7 +1313,7 @@
                                     </WrapPanel>
                                 </ScrollViewer>
                             </Grid>
-                            <Grid x:Name="StaticsDayGrid" Margin="0,70,0,0" >
+                            <Grid x:Name="StaticsDayGrid" Margin="0,70,0,0" Visibility="Collapsed">
                                 <StackPanel HorizontalAlignment="Left" Width="160">
                                     <StackPanel Orientation="Horizontal">
                                         <StackPanel Margin="10">

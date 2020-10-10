@@ -7,15 +7,16 @@ namespace SellerScreen
     [Serializable]
     public class StaticsTotalData
     {
-        public DateTime startDate;
-        public int totalCustomers;
-        public int totalSoldProducts;
-        public double totalGottenCash;
-        public int totalLostProducts;
-        public double totalLostCash;
+        public DateTime StaticsTotalStartDate;
+        public int StaticsTotalCustomers;
+        public int StaticsTotalSoldProducts;
+        public double StaticsTotalGottenCash;
+        public int StaticsTotalLostProducts;
+        public double StaticsTotalLostCash;
 
-        public TimeSpan[] totalPcTime = Array.Empty<TimeSpan>();
-        public short[] totalPcUsers = Array.Empty<short>();
+        public TimeSpan[] StaticsTotalPcUsage = Array.Empty<TimeSpan>();
+        public short[] StaticsTotalPcUsers = Array.Empty<short>();
+        public string[] StaticsTotalPcName = Array.Empty<string>();
 
         public string[] mostSoldProductsName = new string[5];
         public string[] highestEarningsProductsName = new string[5];

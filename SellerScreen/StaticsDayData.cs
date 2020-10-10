@@ -7,16 +7,16 @@ namespace SellerScreen
     [Serializable]
     public class StaticsDayData
     {
-        public string[] SoldSlotName = Array.Empty<string>();
-        public short[] SoldSlotNumber = Array.Empty<short>();
-        public double[] SoldSlotCash = Array.Empty<double>();
-        public double[] SoldSlotSinglePrice = Array.Empty<double>();
-        public short LostProducts;
-        public double LostCash;
+        public string[] StaticsDaySoldSlotName = Array.Empty<string>();
+        public short[] StaticsDaySoldSlotNumber = Array.Empty<short>();
+        public double[] StaticsDaySoldSlotCash = Array.Empty<double>();
+        public double[] StaticsDaySoldSlotSinglePrice = Array.Empty<double>();
+        public short StaticsDayLostProducts;
+        public double StaticsDayLostCash;
 
-        public TimeSpan[] pcTime = Array.Empty<TimeSpan>();
-        public short[] pcUsers = Array.Empty<short>();
-        public string[] userList;
+        public TimeSpan[] StaticsDayPcUsage = Array.Empty<TimeSpan>();
+        public short[] StaticsDayPcUsers = Array.Empty<short>();
+        public string[] StaticsDayPcName = Array.Empty<string>();
 
         public void Save()
         {

@@ -95,7 +95,7 @@ namespace SellerScreen
 
         private DispatcherTimer MessageTimer { get; set; } = new DispatcherTimer();
         private DispatcherTimer StaticsDaySelectionTimer{ get; set; } = new DispatcherTimer();
-        private DispatcherTimer AniTimer { get; set; } = new DispatcherTimer();
+        private DispatcherTimer SideObjectsAniTimer { get; set; } = new DispatcherTimer();
         private readonly LogWindow logWindow = new LogWindow();
         private readonly PathName pathN = new PathName();
 
@@ -106,11 +106,11 @@ namespace SellerScreen
         private bool loadDayStaticsError = false;
         private DateTime lastPayDate = DateTime.Today.AddDays(-5);
         private bool[] displayLogTypes = new bool[5];
-        private bool commissioningMode = false;
+        private bool AppInstallationMode = false;
         private string AppTheme = "System";
         private readonly Random rnd = new Random();
-        private short cloudCount = -1;
-        private short page = 0;
+        private short SideObjectsCount = -1;
+        private short WindowPage = 0;
 
         private short StorageSlots = 0;
         private readonly short StorageLimitedNumber = 10;
@@ -123,27 +123,29 @@ namespace SellerScreen
 
         private short selectedItemsInt = 0;
         private short[] ShopSlotSelectedNumber = Array.Empty<short>();
-        private string shopTask = "";
-        private double mainPrice = 0;
+        private string ShopTask = "";
+        private double ShopMainPrice = 0;
 
-        private string[] SoldSlotName = Array.Empty<string>();
-        private short[] SoldSlotNumber = Array.Empty<short>();
-        private double[] SoldSlotCash = Array.Empty<double>();
-        private double[] SoldSlotSinglePrice = Array.Empty<double>();
-        private short LostProducts;
-        private double LostCash;
-        private TimeSpan[] pcTime = Array.Empty<TimeSpan>();
-        private short[] pcUsers = Array.Empty<short>();
-        private string[] userList;
+        private string[] StaticsDaySoldSlotName = Array.Empty<string>();
+        private short[] StaticsDaySoldSlotNumber = Array.Empty<short>();
+        private double[] StaticsDaySoldSlotCash = Array.Empty<double>();
+        private double[] StaticsDaySoldSlotSinglePrice = Array.Empty<double>();
+        private short StaticsDayLostProducts;
+        private double StaticsDayLostCash;
 
-        private DateTime startDate;
-        private int totalCustomers;
-        private int totalSoldProducts;
-        private double totalGottenCash;
-        private int totalLostProducts;
-        private double totalLostCash;
-        private readonly TimeSpan[] totalPcTime = new TimeSpan[2];
-        private readonly short[] totalPcUsers = new short[2];
+        private TimeSpan[] StaticsDayPcUsage = Array.Empty<TimeSpan>();
+        private short[] StaticsDayPcUsers = Array.Empty<short>();
+        private string[] StaticsDayPcName = Array.Empty<string>();
+        private TimeSpan[] StaticsTotalPcUsage = Array.Empty<TimeSpan>();
+        private short[] StaticsTotalPcUsers = Array.Empty<short>();
+        private string[] StaticsTotalPcName = Array.Empty<string>();
+
+        private DateTime StaticsTotalStartDate;
+        private int StaticsTotalCustomers;
+        private int StaticsTotalSoldProducts;
+        private double StaticsTotalGottenCash;
+        private int StaticsTotalLostProducts;
+        private double StaticsTotalLostCash;
 
         private readonly string[] mostSoldProductsName = new string[5];
         private readonly string[] highestEarningsProductsName = new string[5];
@@ -176,8 +178,8 @@ namespace SellerScreen
             StaticsDaySelectionTimer.Tick += new EventHandler(StaticsDaySelectionTimer_Tick);
             StaticsDaySelectionTimer.Interval = new TimeSpan(0, 0, 0, 1, 5);
 
-            AniTimer.Tick += new EventHandler(AniTimer_Tick);
-            AniTimer.Interval = new TimeSpan(0, 0, 0, 2);
+            SideObjectsAniTimer.Tick += new EventHandler(AniTimer_Tick);
+            SideObjectsAniTimer.Interval = new TimeSpan(0, 0, 0, 2);
 
             Directory.CreateDirectory(Path.GetDirectoryName(pathN.settingsFile));
             Directory.CreateDirectory(Path.GetDirectoryName(pathN.staticsFile));
@@ -191,11 +193,11 @@ namespace SellerScreen
 
             if (!File.Exists($"{pathN.settingsFile}Settings.xml") && !File.Exists($"{pathN.settingsFile}Storage.xml") && !File.Exists($"{pathN.settingsFile}TotalStatics.xml"))
             {
-                commissioningMode = true;
-                CommissioningMode();
+                AppInstallationMode = true;
+                InstallationMode();
             }
 
-            if (commissioningMode == false)
+            if (AppInstallationMode == false)
             {
                 Reload();
             }
@@ -209,7 +211,7 @@ namespace SellerScreen
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
-            AniTimer.Start();
+            SideObjectsAniTimer.Start();
             StaticsDayYearUpDown.Value = DateTime.Now.Year;
             StaticsDayYearUpDown.Maximum = DateTime.Now.Year;
             StaticsDayMonthUpDown.Value = DateTime.Now.Month;
@@ -280,9 +282,9 @@ namespace SellerScreen
 
         private void AniTimer_Tick(object sender, EventArgs e)
         {
-            cloudCount++;
+            SideObjectsCount++;
 
-            if (cloudCount <= 10)
+            if (SideObjectsCount <= 10)
             {
                 try
                 {
@@ -296,7 +298,7 @@ namespace SellerScreen
                         Height = imgHeight,
                         Width = imgHeight * 3 / 2,
                         Source = new BitmapImage(new Uri($@"Resources/wolke{cloud}.png", UriKind.Relative)),
-                        Name = $"cloud{cloudCount}",
+                        Name = $"cloud{SideObjectsCount}",
                         Tag = cloud.ToString(),
                         HorizontalAlignment = HorizontalAlignment.Left,
                         VerticalAlignment = VerticalAlignment.Top
@@ -321,7 +323,7 @@ namespace SellerScreen
             }
             else
             {
-                AniTimer.Stop();
+                SideObjectsAniTimer.Stop();
 
                 try
                 {
@@ -334,7 +336,7 @@ namespace SellerScreen
                     };
                     ani.Completed += new EventHandler(FadeAni_Completed);
 
-                    for (int i = 0; i < cloudCount; i++)
+                    for (int i = 0; i < SideObjectsCount; i++)
                     {
                         Image img = (Image)FindName($"cloud{i}");
                         img.BeginAnimation(OpacityProperty, ani);
@@ -346,28 +348,28 @@ namespace SellerScreen
 
                 }
 
-                cloudCount = -1;
+                SideObjectsCount = -1;
             }
         }
 
         private void FadeAni_Completed(object sender, EventArgs e)
         {
-            AniTimer.Start();
+            SideObjectsAniTimer.Start();
             SideBar.Children.Clear();
         }
         #endregion
 
         #region Funktionen
-        private void CommissioningMode()
+        private void InstallationMode()
         {
-            CommissioningModePanel.Visibility = Visibility.Visible;
+            InstallationModePanel.Visibility = Visibility.Visible;
             TopBar.IsEnabled = false;
         }
 
         private void PageChange(short newPage)
         {
             bool error = false;
-            page = newPage;
+            WindowPage = newPage;
 
             DoubleAnimation aniOUT = new DoubleAnimation
             {
@@ -518,7 +520,7 @@ namespace SellerScreen
 
         private void PageFadeOut_Comleted(object sender, EventArgs e)
         {
-            switch (page)
+            switch (WindowPage)
             {
                 case 1:
                     Page2Grid.Visibility = Visibility.Collapsed;
@@ -897,13 +899,13 @@ namespace SellerScreen
             {
                 int tag = int.Parse(btn.Tag.ToString());
                 short maxCount;
-                if (shopTask == "sell")
+                if (ShopTask == "sell")
                 {
                     maxCount = StorageSlotNumber[tag];
                 }
                 else
                 {
-                    maxCount = SoldSlotNumber[tag];
+                    maxCount = StaticsDaySoldSlotNumber[tag];
                 }
 
                 if (ShopSlotSelectedNumber[tag] < maxCount)
@@ -926,13 +928,13 @@ namespace SellerScreen
             {
                 short tag = short.Parse(iup.Tag.ToString());
                 short maxCount;
-                if (shopTask == "sell")
+                if (ShopTask == "sell")
                 {
                     maxCount = StorageSlotNumber[tag];
                 }
                 else
                 {
-                    maxCount = SoldSlotNumber[tag];
+                    maxCount = StaticsDaySoldSlotNumber[tag];
                 }
 
                 if (ShopSlotSelectedNumber[tag] < maxCount)
@@ -964,8 +966,8 @@ namespace SellerScreen
             }
             else
             {
-                length = SoldSlotSinglePrice.Length;
-                Array.Resize(ref ShopSlotSelectedNumber, SoldSlotSinglePrice.Length);
+                length = StaticsDaySoldSlotSinglePrice.Length;
+                Array.Resize(ref ShopSlotSelectedNumber, StaticsDaySoldSlotSinglePrice.Length);
             }
 
             try
@@ -988,9 +990,9 @@ namespace SellerScreen
                             break;
 
                         case "statics":
-                            name = SoldSlotName[i];
-                            number = SoldSlotNumber[i];
-                            price = SoldSlotSinglePrice[i];
+                            name = StaticsDaySoldSlotName[i];
+                            number = StaticsDaySoldSlotNumber[i];
+                            price = StaticsDaySoldSlotSinglePrice[i];
                             if (number > 0)
                             {
                                 status = true;
@@ -1554,26 +1556,26 @@ namespace SellerScreen
         private void GetMainPrice()
         {
             double[] price;
-            if (shopTask == "sell")
+            if (ShopTask == "sell")
             {
                 price = StorageSlotPrice;
             }
             else
             {
-                price = SoldSlotSinglePrice;
+                price = StaticsDaySoldSlotSinglePrice;
             }
 
-            mainPrice = 0;
+            ShopMainPrice = 0;
             for (int i = 0; i < price.Length; i++)
             {
                 double singlePrice = ShopSlotSelectedNumber[i] * price[i];
                 string txt = singlePrice.ToString();
-                mainPrice += double.Parse(txt);
+                ShopMainPrice += double.Parse(txt);
             }
-            ShopMainPriceTxtBlock.Content = $"{mainPrice}";
+            ShopMainPriceTxtBlock.Content = $"{ShopMainPrice}";
             for (int t = 0; t < 10; t++)
             {
-                bool endsWithSearchResult = mainPrice.ToString().EndsWith($",{t}", StringComparison.CurrentCultureIgnoreCase);
+                bool endsWithSearchResult = ShopMainPrice.ToString().EndsWith($",{t}", StringComparison.CurrentCultureIgnoreCase);
                 if (endsWithSearchResult == true)
                 {
                     ShopMainPriceTxtBlock.Content += "0";
@@ -1600,8 +1602,8 @@ namespace SellerScreen
             OpenShop();
 
             TopBar.IsEnabled = false;
-            shopTask = "sell";
-            CustomerNumberTxtBlock.Content = totalCustomers + 1;
+            ShopTask = "sell";
+            CustomerNumberTxtBlock.Content = StaticsTotalCustomers + 1;
         }
 
         private void CancelPurchaseBtn_Click(object sender, RoutedEventArgs e)
@@ -1609,8 +1611,8 @@ namespace SellerScreen
             OpenShop();
 
             TopBar.IsEnabled = false;
-            shopTask = "cancel";
-            CustomerNumberTxtBlock.Content = totalCustomers;
+            ShopTask = "cancel";
+            CustomerNumberTxtBlock.Content = StaticsTotalCustomers;
         }
 
         private void ComplainPurchaseBtn_Click(object sender, RoutedEventArgs e)
@@ -1618,8 +1620,8 @@ namespace SellerScreen
             OpenShop();
 
             TopBar.IsEnabled = false;
-            shopTask = "complain";
-            CustomerNumberTxtBlock.Content = totalCustomers;
+            ShopTask = "complain";
+            CustomerNumberTxtBlock.Content = StaticsTotalCustomers;
         }
 
         private void CancelComplainPurchaseBtn_GotFocus(object sender, RoutedEventArgs e)
@@ -1632,7 +1634,7 @@ namespace SellerScreen
             CloseShop();
 
             TopBar.IsEnabled = true;
-            shopTask = "";
+            ShopTask = "";
             ClearShoppingCard();
             Reload();
         }
@@ -1668,10 +1670,10 @@ namespace SellerScreen
                     bool error = false;
                     GetMainPrice();
 
-                    if (shopTask == "sell")
+                    if (ShopTask == "sell")
                     {
-                        totalCustomers++;
-                        totalGottenCash += mainPrice;
+                        StaticsTotalCustomers++;
+                        StaticsTotalGottenCash += ShopMainPrice;
 
                         for (int n = 0; n < StorageSlots; n++)
                         {
@@ -1680,7 +1682,7 @@ namespace SellerScreen
                                 try
                                 {
                                     StorageSlotNumber[n] -= ShopSlotSelectedNumber[n];
-                                    totalSoldProducts += ShopSlotSelectedNumber[n];
+                                    StaticsTotalSoldProducts += ShopSlotSelectedNumber[n];
 
                                     int i = -1;
                                     bool productFound = false;
@@ -1712,30 +1714,30 @@ namespace SellerScreen
 
                                     i = -1;
                                     productFound = false;
-                                    foreach (string s in SoldSlotName)
+                                    foreach (string s in StaticsDaySoldSlotName)
                                     {
                                         i++;
                                         if (StorageSlotName[n] == s && StorageSlotPrice[n] == productsSinglePriceList[n])
                                         {
-                                            SoldSlotNumber[i] += ShopSlotSelectedNumber[n];
-                                            SoldSlotCash[i] += ShopSlotSelectedNumber[n] * StorageSlotPrice[n];
+                                            StaticsDaySoldSlotNumber[i] += ShopSlotSelectedNumber[n];
+                                            StaticsDaySoldSlotCash[i] += ShopSlotSelectedNumber[n] * StorageSlotPrice[n];
                                             productFound = true;
                                             break;
                                         }
                                     }
                                     if (productFound == false)
                                     {
-                                        Array.Resize(ref SoldSlotName, SoldSlotName.Length + 1);
-                                        SoldSlotName[SoldSlotName.Length - 1] = StorageSlotName[n];
+                                        Array.Resize(ref StaticsDaySoldSlotName, StaticsDaySoldSlotName.Length + 1);
+                                        StaticsDaySoldSlotName[StaticsDaySoldSlotName.Length - 1] = StorageSlotName[n];
 
-                                        Array.Resize(ref SoldSlotNumber, SoldSlotNumber.Length + 1);
-                                        SoldSlotNumber[SoldSlotNumber.Length - 1] = ShopSlotSelectedNumber[n];
+                                        Array.Resize(ref StaticsDaySoldSlotNumber, StaticsDaySoldSlotNumber.Length + 1);
+                                        StaticsDaySoldSlotNumber[StaticsDaySoldSlotNumber.Length - 1] = ShopSlotSelectedNumber[n];
 
-                                        Array.Resize(ref SoldSlotCash, SoldSlotCash.Length + 1);
-                                        SoldSlotCash[SoldSlotCash.Length - 1] = StorageSlotPrice[n] * ShopSlotSelectedNumber[n];
+                                        Array.Resize(ref StaticsDaySoldSlotCash, StaticsDaySoldSlotCash.Length + 1);
+                                        StaticsDaySoldSlotCash[StaticsDaySoldSlotCash.Length - 1] = StorageSlotPrice[n] * ShopSlotSelectedNumber[n];
 
-                                        Array.Resize(ref SoldSlotSinglePrice, SoldSlotSinglePrice.Length + 1);
-                                        SoldSlotSinglePrice[SoldSlotSinglePrice.Length - 1] = StorageSlotPrice[n];
+                                        Array.Resize(ref StaticsDaySoldSlotSinglePrice, StaticsDaySoldSlotSinglePrice.Length + 1);
+                                        StaticsDaySoldSlotSinglePrice[StaticsDaySoldSlotSinglePrice.Length - 1] = StorageSlotPrice[n];
                                     }
                                 }
                                 catch (Exception ex)
@@ -1748,12 +1750,12 @@ namespace SellerScreen
 
                         lastPayDate = DateTime.Now.Date;
                     }
-                    else if (shopTask == "cancel")
+                    else if (ShopTask == "cancel")
                     {
                         LoadStorage();
-                        totalGottenCash -= mainPrice;
+                        StaticsTotalGottenCash -= ShopMainPrice;
 
-                        for (int n = 0; n < SoldSlotName.Length; n++)
+                        for (int n = 0; n < StaticsDaySoldSlotName.Length; n++)
                         {
                             try
                             {
@@ -1763,28 +1765,28 @@ namespace SellerScreen
                                     foreach (string s in productsNameList)
                                     {
                                         i++;
-                                        if (SoldSlotName[n] == s && StorageSlotPrice[n] == productsSinglePriceList[n])
+                                        if (StaticsDaySoldSlotName[n] == s && StorageSlotPrice[n] == productsSinglePriceList[n])
                                         {
                                             productsNumberList[i] -= ShopSlotSelectedNumber[n];
-                                            productsCashList[i] -= ShopSlotSelectedNumber[n] * SoldSlotSinglePrice[n];
+                                            productsCashList[i] -= ShopSlotSelectedNumber[n] * StaticsDaySoldSlotSinglePrice[n];
                                             break;
                                         }
                                     }
 
                                     i = -1;
-                                    foreach (string s in SoldSlotName)
+                                    foreach (string s in StaticsDaySoldSlotName)
                                     {
                                         i++;
-                                        if (SoldSlotName[n] == s && StorageSlotPrice[n] == SoldSlotSinglePrice[n])
+                                        if (StaticsDaySoldSlotName[n] == s && StorageSlotPrice[n] == StaticsDaySoldSlotSinglePrice[n])
                                         {
-                                            SoldSlotNumber[i] -= ShopSlotSelectedNumber[n];
-                                            SoldSlotCash[i] -= ShopSlotSelectedNumber[n] * SoldSlotSinglePrice[n];
+                                            StaticsDaySoldSlotNumber[i] -= ShopSlotSelectedNumber[n];
+                                            StaticsDaySoldSlotCash[i] -= ShopSlotSelectedNumber[n] * StaticsDaySoldSlotSinglePrice[n];
                                             break;
                                         }
                                     }
 
                                     StorageSlotNumber[n] += ShopSlotSelectedNumber[n];
-                                    totalSoldProducts -= ShopSlotSelectedNumber[n];
+                                    StaticsTotalSoldProducts -= ShopSlotSelectedNumber[n];
                                 }
                             }
                             catch (Exception ex)
@@ -1794,16 +1796,16 @@ namespace SellerScreen
                             }
                         }
                     }
-                    else if (shopTask == "complain")
+                    else if (ShopTask == "complain")
                     {
                         LoadStorage();
 
-                        for (int n = 0; n < SoldSlotName.Length; n++)
+                        for (int n = 0; n < StaticsDaySoldSlotName.Length; n++)
                         {
                             try
                             {
-                                LostProducts += ShopSlotSelectedNumber[n];
-                                LostCash += SoldSlotSinglePrice[n] * ShopSlotSelectedNumber[n];
+                                StaticsDayLostProducts += ShopSlotSelectedNumber[n];
+                                StaticsDayLostCash += StaticsDaySoldSlotSinglePrice[n] * ShopSlotSelectedNumber[n];
                             }
                             catch (Exception ex)
                             {
@@ -1812,9 +1814,9 @@ namespace SellerScreen
                             }
                         }
 
-                        totalGottenCash -= mainPrice;
-                        totalLostCash += LostCash;
-                        totalLostProducts += LostProducts;
+                        StaticsTotalGottenCash -= ShopMainPrice;
+                        StaticsTotalLostCash += StaticsDayLostCash;
+                        StaticsTotalLostProducts += StaticsDayLostProducts;
                     }
                     else
                     {
@@ -2662,18 +2664,19 @@ namespace SellerScreen
 
             StaticsTotalData staTS = new StaticsTotalData
             {
-                startDate = startDate,
-                totalCustomers = totalCustomers,
-                totalSoldProducts = totalSoldProducts,
-                totalGottenCash = totalGottenCash,
-                totalLostCash = totalLostCash,
-                totalLostProducts = totalLostProducts,
+                StaticsTotalStartDate = StaticsTotalStartDate,
+                StaticsTotalCustomers = StaticsTotalCustomers,
+                StaticsTotalSoldProducts = StaticsTotalSoldProducts,
+                StaticsTotalGottenCash = StaticsTotalGottenCash,
+                StaticsTotalLostCash = StaticsTotalLostCash,
+                StaticsTotalLostProducts = StaticsTotalLostProducts,
                 productsNameList = productsNameList,
                 productsNumberList = productsNumberList,
                 productsCashList = productsCashList,
                 productsSinglePriceList = productsSinglePriceList,
-                totalPcTime = totalPcTime,
-                totalPcUsers = totalPcUsers,
+                StaticsTotalPcUsage = StaticsTotalPcUsage,
+                StaticsTotalPcUsers = StaticsTotalPcUsers,
+                StaticsTotalPcName = StaticsTotalPcName,
                 mostSoldProductsName = mostSoldProductsName,
                 mostSoldProductsNumber = mostSoldProductsNumber,
                 mostSoldProductsSinglePrice = mostSoldProductsSinglePrice,
@@ -2703,57 +2706,51 @@ namespace SellerScreen
 
                 try
                 {
-                    startDate = staTL.startDate;
+                    StaticsTotalStartDate = staTL.StaticsTotalStartDate;
                 }
                 catch (Exception ex)
                 {
                     logWindow.NewLog($"Error in Loading StaticsData/Total -> Reading startDate failed! {ex.Message}", 2);
-
                 }
                 try
                 {
-                    totalCustomers = staTL.totalCustomers;
+                    StaticsTotalCustomers = staTL.StaticsTotalCustomers;
                 }
                 catch (Exception ex)
                 {
                     logWindow.NewLog($"Error in Loading StaticsData/Total -> Reading totalCustomers failed! {ex.Message}", 2);
-
                 }
                 try
                 {
-                    totalSoldProducts = staTL.totalSoldProducts;
+                    StaticsTotalSoldProducts = staTL.StaticsTotalSoldProducts;
                 }
                 catch (Exception ex)
                 {
                     logWindow.NewLog($"Error in Loading StaticsData/Total -> Reading totalSoldProducts failed! {ex.Message}", 2);
-
                 }
                 try
                 {
-                    totalGottenCash = staTL.totalGottenCash;
+                    StaticsTotalGottenCash = staTL.StaticsTotalGottenCash;
                 }
                 catch (Exception ex)
                 {
                     logWindow.NewLog($"Error in Loading StaticsData/Total -> Reading totalGottenCash failed! {ex.Message}", 2);
-
                 }
                 try
                 {
-                    totalLostCash = staTL.totalLostCash;
+                    StaticsTotalLostCash = staTL.StaticsTotalLostCash;
                 }
                 catch (Exception ex)
                 {
                     logWindow.NewLog($"Error in Loading StaticsData/Total -> Reading totalLostProducts failed! {ex.Message}", 2);
-
                 }
                 try
                 {
-                    totalLostProducts = staTL.totalLostProducts;
+                    StaticsTotalLostProducts = staTL.StaticsTotalLostProducts;
                 }
                 catch (Exception ex)
                 {
                     logWindow.NewLog($"Error in Loading StaticsData/Total -> Reading totalLostProducts failed! {ex.Message}", 2);
-
                 }
                 try
                 {
@@ -2762,7 +2759,6 @@ namespace SellerScreen
                 catch (Exception ex)
                 {
                     logWindow.NewLog($"Error in Loading StaticsData/Total -> Reading productsNumberList failed! {ex.Message}", 2);
-
                 }
                 try
                 {
@@ -2771,7 +2767,6 @@ namespace SellerScreen
                 catch (Exception ex)
                 {
                     logWindow.NewLog($"Error in Loading StaticsData/Total -> Reading productsNameList failed! {ex.Message}", 2);
-
                 }
                 try
                 {
@@ -2780,7 +2775,6 @@ namespace SellerScreen
                 catch (Exception ex)
                 {
                     logWindow.NewLog($"Error in Loading StaticsData/Total -> Reading productsCashList failed! {ex.Message}", 2);
-
                 }
                 try
                 {
@@ -2789,29 +2783,26 @@ namespace SellerScreen
                 catch (Exception ex)
                 {
                     logWindow.NewLog($"Error in Loading StaticsData/Total -> Reading productsSinglePriceList failed! {ex.Message}", 2);
-
                 }
 
-                for (int i = 0; i < 2; i++)
+                for (int i = 0; i < staTL.StaticsTotalPcUsage.Length; i++)
                 {
                     try
                     {
-                        totalPcTime[i] = staTL.totalPcTime[i];
+                        StaticsTotalPcUsage[i] = staTL.StaticsTotalPcUsage[i];
                     }
                     catch (Exception ex)
                     {
-                        logWindow.NewLog($"Reading StaticsData/Total/totalPcTime{i} failed! {ex.Message}", 2);
-
+                        logWindow.NewLog($"Reading StaticsData/Total/StaticsTotalPcUsers{i} failed! {ex.Message}", 2);
                     }
 
                     try
                     {
-                        totalPcUsers[i] = staTL.totalPcUsers[i];
+                        StaticsTotalPcUsers[i] = staTL.StaticsTotalPcUsers[i];
                     }
                     catch (Exception ex)
                     {
-                        logWindow.NewLog($"Reading StaticsData/Total/totalPcUsers{i} failed! {ex.Message}", 2);
-
+                        logWindow.NewLog($"Reading StaticsData/Total/StaticsTotalPcUsers{i} failed! {ex.Message}", 2);
                     }
                 }
 
@@ -2824,7 +2815,6 @@ namespace SellerScreen
                     catch (Exception ex)
                     {
                         logWindow.NewLog($"Reading StaticsData/Total/mostSoldProductsName{i} failed! {ex.Message}", 2);
-
                     }
 
                     try
@@ -2834,7 +2824,6 @@ namespace SellerScreen
                     catch (Exception ex)
                     {
                         logWindow.NewLog($"Reading StaticsData/Total/mostSoldProductsNumber{i} failed! {ex.Message}", 2);
-
                     }
 
                     try
@@ -2844,7 +2833,6 @@ namespace SellerScreen
                     catch (Exception ex)
                     {
                         logWindow.NewLog($"Reading StaticsData/Total/mostSoldProductsSinglePrice{i} failed! {ex.Message}", 2);
-
                     }
 
                     try
@@ -2854,7 +2842,6 @@ namespace SellerScreen
                     catch (Exception ex)
                     {
                         logWindow.NewLog($"Reading StaticsData/Total/highestEarningsProductsName{i} failed! {ex.Message}", 2);
-
                     }
 
                     try
@@ -2864,7 +2851,6 @@ namespace SellerScreen
                     catch (Exception ex)
                     {
                         logWindow.NewLog($"Reading StaticsData/Total/highestEarningsProductsNumber{i} failed! {ex.Message}", 2);
-
                     }
 
                     try
@@ -2874,7 +2860,6 @@ namespace SellerScreen
                     catch (Exception ex)
                     {
                         logWindow.NewLog($"Reading StaticsData/Total/highestEarningsProductsSinglePrice{i} failed! {ex.Message}", 2);
-
                     }
                 }
 
@@ -2895,38 +2880,85 @@ namespace SellerScreen
 
         private void BuildTotalStatics()
         {
+            Label lbl;
+
             try
             {
-                StaticsStartTimeLbl.Content = startDate.ToShortDateString();
-                StaticsAllCustomerLbl.Content = totalCustomers.ToString();
-                StaticsAllSoldProductsNumberLbl.Content = totalSoldProducts.ToString();
-                StaticsAllGottenCashNumberLbl.Content = totalGottenCash;
+                StaticsTotalStartTimeLbl.Content = StaticsTotalStartDate.ToShortDateString();
+                StaticsTotalCustomersLbl.Content = StaticsTotalCustomers.ToString();
+                StaticsTotalSoldProductsNumberLbl.Content = StaticsTotalSoldProducts.ToString();
+                StaticsTotalGottenCashNumberLbl.Content = StaticsTotalGottenCash;
                 for (int t = 0; t < 10; t++)
                 {
-                    bool endsWithSearchResult = totalGottenCash.ToString().EndsWith($",{t}", StringComparison.CurrentCultureIgnoreCase);
+                    bool endsWithSearchResult = StaticsTotalGottenCash.ToString().EndsWith($",{t}", StringComparison.CurrentCultureIgnoreCase);
                     if (endsWithSearchResult == true)
                     {
-                        StaticsAllGottenCashNumberLbl.Content += "0";
+                        StaticsTotalGottenCashNumberLbl.Content += "0";
                     }
                 }
-                StaticsAllGottenCashNumberLbl.Content += "€";
+                StaticsTotalGottenCashNumberLbl.Content += "€";
 
-                StaticsAllLostCashNumberLbl.Content = totalLostCash;
+                StaticsTotalLostCashNumberLbl.Content = StaticsTotalLostCash;
                 for (int t = 0; t < 10; t++)
                 {
-                    bool endsWithSearchResult = totalLostCash.ToString().EndsWith($",{t}", StringComparison.CurrentCultureIgnoreCase);
+                    bool endsWithSearchResult = StaticsTotalLostCash.ToString().EndsWith($",{t}", StringComparison.CurrentCultureIgnoreCase);
                     if (endsWithSearchResult == true)
                     {
-                        StaticsAllLostCashNumberLbl.Content += "0";
+                        StaticsTotalLostCashNumberLbl.Content += "0";
                     }
                 }
-                StaticsAllLostCashNumberLbl.Content += "€";
+                StaticsTotalLostCashNumberLbl.Content += "€";
 
-                StaticsAllLostProductsNumberLbl.Content = totalLostProducts.ToString();
-                StaticsTotalPc1TimeLbl.Content = pcTime[0].Hours + "," + pcTime[0].Minutes;
-                StaticsTotalPc2TimeLbl.Content = pcTime[1].Hours + "," + pcTime[1].Minutes;
-                StaticsTotalPc1UserLbl.Content = pcUsers[0].ToString();
-                StaticsTotalPc2UserLbl.Content = pcUsers[1].ToString();
+                StaticsAllLostProductsNumberLbl.Content = StaticsTotalLostProducts.ToString();
+
+                for (int i = 0; i < StaticsTotalPcUsers.Length; i++)
+                {
+                    //StaticsTotalPc0NameLbl;
+                    //StaticsTotalPc0SlotLbl;
+                    //StaticsTotalPc0UsageLbl;
+                    //StaticsTotalPc0UsersLbl;
+
+                    Label slotLbl = new Label
+                    {
+                        Content = (i+1).ToString(),
+                        Margin = new Thickness(5),
+                        FontWeight = FontWeights.Bold,
+                        HorizontalContentAlignment = HorizontalAlignment.Center,
+                        Name = $"StaticsTotalPc{i}SlotLbl",
+                        Tag = i.ToString()
+                    };
+
+                    Label nameLbl = new Label
+                    {
+                        Content = StaticsTotalPcName[i].ToString(),
+                        Margin = new Thickness(5),
+                        Name = $"StaticsTotalPc{i}NameLbl",
+                        Tag = i.ToString()
+                    };
+
+                    Label usersLbl = new Label
+                    {
+                        Content = StaticsTotalPcUsers[i].ToString(),
+                        Margin = new Thickness(5),
+                        HorizontalContentAlignment = HorizontalAlignment.Center,
+                        Name = $"StaticsTotalPc{i}UsersLbl",
+                        Tag = i.ToString()
+                    };
+
+                    Label usageLbl = new Label
+                    {
+                        Content = StaticsTotalPcUsage[i].ToString(),
+                        Margin = new Thickness(5),
+                        HorizontalContentAlignment = HorizontalAlignment.Center,
+                        Name = $"StaticsTotalPc{i}UsageLbl",
+                        Tag = i.ToString()
+                    };
+                }
+
+                //StaticsTotalPc1TimeLbl.Content = pcTime[0].Hours + "," + pcTime[0].Minutes;
+                //StaticsTotalPc2TimeLbl.Content = pcTime[1].Hours + "," + pcTime[1].Minutes;
+                //StaticsTotalPc1UserLbl.Content = pcUsers[0].ToString();
+                //StaticsTotalPc2UserLbl.Content = pcUsers[1].ToString();
 
                 StaticsAllProductTypesListView.Items.Clear();
                 for (int i = 0; i < productsNameList.Length; i++)
@@ -2939,7 +2971,6 @@ namespace SellerScreen
                 StaticsAllProductTypesNumberLbl.Content = productsNameList.Length.ToString();
 
 
-                Label lbl;
                 for (int i = 0; i < 5; i++)
                 {
                     lbl = (Label)FindName($"StaticsTotalMostSoldProductsName{i}");
@@ -3000,7 +3031,6 @@ namespace SellerScreen
             catch (Exception ex)
             {
                 logWindow.NewLog($"Building StaticsData/Total failed! {ex.Message}", 2);
-
             }
         }
 
@@ -3010,15 +3040,15 @@ namespace SellerScreen
             {
                 StaticsDayData staDS = new StaticsDayData
                 {
-                    SoldSlotCash = SoldSlotCash,
-                    SoldSlotNumber = SoldSlotNumber,
-                    SoldSlotName = SoldSlotName,
-                    SoldSlotSinglePrice = SoldSlotSinglePrice,
-                    LostCash = LostCash,
-                    LostProducts = LostProducts,
-                    pcTime = pcTime,
-                    pcUsers = pcUsers,
-                    userList = userList
+                    StaticsDaySoldSlotCash = StaticsDaySoldSlotCash,
+                    StaticsDaySoldSlotNumber = StaticsDaySoldSlotNumber,
+                    StaticsDaySoldSlotName = StaticsDaySoldSlotName,
+                    StaticsDaySoldSlotSinglePrice = StaticsDaySoldSlotSinglePrice,
+                    StaticsDayLostCash = StaticsDayLostCash,
+                    StaticsDayLostProducts = StaticsDayLostProducts,
+                    StaticsDayPcUsage = StaticsDayPcUsage,
+                    StaticsDayPcUsers = StaticsDayPcUsers,
+                    StaticsDayPcName = StaticsDayPcName
                 };
                 staDS.Save();
 
@@ -3041,99 +3071,89 @@ namespace SellerScreen
 
                 try
                 {
-                    SoldSlotCash = staDL.SoldSlotCash;
+                    StaticsDaySoldSlotCash = staDL.StaticsDaySoldSlotCash;
                 }
                 catch (Exception ex)
                 {
                     logWindow.NewLog($"Error in Loading StaticsData/Day -> Reading SoldSlotCash failed! {ex.Message}", 2);
-
                     loadDayStaticsError = true;
                 }
                 try
                 {
-                    SoldSlotNumber = staDL.SoldSlotNumber;
+                    StaticsDaySoldSlotNumber = staDL.StaticsDaySoldSlotNumber;
                 }
                 catch (Exception ex)
                 {
                     logWindow.NewLog($"Error in Loading StaticsData/Day -> Reading SoldSlotNumber failed! {ex.Message}", 2);
-
                     loadDayStaticsError = true;
                 }
                 try
                 {
-                    SoldSlotName = staDL.SoldSlotName;
+                    StaticsDaySoldSlotName = staDL.StaticsDaySoldSlotName;
                 }
                 catch (Exception ex)
                 {
                     logWindow.NewLog($"Error in Loading StaticsData/Day -> Reading SoldSlotName failed! {ex.Message}", 2);
-
                     loadDayStaticsError = true;
                 }
                 try
                 {
-                    SoldSlotSinglePrice = staDL.SoldSlotSinglePrice;
+                    StaticsDaySoldSlotSinglePrice = staDL.StaticsDaySoldSlotSinglePrice;
                 }
                 catch (Exception ex)
                 {
                     logWindow.NewLog($"Error in Loading StaticsData/Day -> Reading SoldSlotSinglePrice failed! {ex.Message}", 2);
-
                     loadDayStaticsError = true;
                 }
                 try
                 {
-                    LostCash = staDL.LostCash;
+                    StaticsDayLostCash = staDL.StaticsDayLostCash;
                 }
                 catch (Exception ex)
                 {
                     logWindow.NewLog($"Error in Loading StaticsData/Day -> Reading LostCash failed! {ex.Message}", 2);
-
                     loadDayStaticsError = true;
                 }
                 try
                 {
-                    LostProducts = staDL.LostProducts;
+                    StaticsDayLostProducts = staDL.StaticsDayLostProducts;
                 }
                 catch (Exception ex)
                 {
                     logWindow.NewLog($"Error in Loading StaticsData/Day -> Reading LostProducts failed! {ex.Message}", 2);
-
                     loadDayStaticsError = true;
                 }
                 try
                 {
-                    pcTime = staDL.pcTime;
+                    StaticsDayPcUsage = staDL.StaticsDayPcUsage;
                 }
                 catch (Exception ex)
                 {
-                    logWindow.NewLog($"Error in Loading StaticsData/Day -> Reading pcTime failed! {ex.Message}", 2);
-
+                    logWindow.NewLog($"Error in Loading StaticsData/Day -> Reading StaticsDayPcUsage failed! {ex.Message}", 2);
                     loadDayStaticsError = true;
                 }
                 try
                 {
-                    pcUsers = staDL.pcUsers;
+                    StaticsDayPcUsers = staDL.StaticsDayPcUsers;
                 }
                 catch (Exception ex)
                 {
-                    logWindow.NewLog($"Error in Loading StaticsData/Day -> Reading pcUsers failed! {ex.Message}", 2);
-
+                    logWindow.NewLog($"Error in Loading StaticsData/Day -> Reading StaticsDayPcUsers failed! {ex.Message}", 2);
                     loadDayStaticsError = true;
                 }
                 try
                 {
-                    userList = staDL.userList;
+                    StaticsDayPcName = staDL.StaticsDayPcName;
                 }
                 catch (Exception ex)
                 {
-                    logWindow.NewLog($"Error in Loading StaticsData/Day -> Reading userList failed! {ex.Message}", 2);
-
+                    logWindow.NewLog($"Error in Loading StaticsData/Day -> Reading StaticsDayPcName failed! {ex.Message}", 2);
                     loadDayStaticsError = true;
                 }
             }
             catch (Exception ex)
             {
                 logWindow.NewLog($"Loading StaticsData/Day failed! {ex.Message}", 2);
-
                 loadDayStaticsError = true;
             }
         }
@@ -3158,9 +3178,9 @@ namespace SellerScreen
                     StaticsDayCashPanel.Children.Clear();
                     StaticsDaySinglePricePanel.Children.Clear();
 
-                    for (int i = 0; i < SoldSlotName.Length; i++)
+                    for (int i = 0; i < StaticsDaySoldSlotName.Length; i++)
                     {
-                        if (!string.IsNullOrEmpty(SoldSlotName[i]))
+                        if (!string.IsNullOrEmpty(StaticsDaySoldSlotName[i]))
                         {
                             Label lbl = new Label
                             {
@@ -3176,7 +3196,7 @@ namespace SellerScreen
                             {
                                 Name = $"StaticsDaySlot{i}NameLbl",
                                 Tag = i,
-                                Content = $"{SoldSlotName[i]}",
+                                Content = $"{StaticsDaySoldSlotName[i]}",
                                 Margin = new Thickness(5, 5, 5, 5),
                                 VerticalContentAlignment = VerticalAlignment.Center,
                             };
@@ -3185,7 +3205,7 @@ namespace SellerScreen
                             {
                                 Name = $"StaticsDaySlot{i}SinglePriceLbl",
                                 Tag = i,
-                                Content = $"{SoldSlotSinglePrice[i]}",
+                                Content = $"{StaticsDaySoldSlotSinglePrice[i]}",
                                 Margin = new Thickness(5, 5, 5, 5),
                                 VerticalContentAlignment = VerticalAlignment.Center,
                                 HorizontalContentAlignment = HorizontalAlignment.Center,
@@ -3194,14 +3214,14 @@ namespace SellerScreen
                             PieSeries series = new PieSeries()
                             {
                                 Title = "Produkt " + (i+1),
-                                Values = new ChartValues<double> { SoldSlotNumber[i] },
+                                Values = new ChartValues<double> { StaticsDaySoldSlotNumber[i] },
                                 DataLabels = true,
                                 LabelPoint = labelPoint
                             };
 
                             for (int t = 0; t < 10; t++)
                             {
-                                bool endsWithSearchResult = SoldSlotSinglePrice[i].ToString().EndsWith($",{t}", StringComparison.CurrentCultureIgnoreCase);
+                                bool endsWithSearchResult = StaticsDaySoldSlotSinglePrice[i].ToString().EndsWith($",{t}", StringComparison.CurrentCultureIgnoreCase);
                                 if (endsWithSearchResult == true)
                                 {
                                     lbl2.Content += "0";
@@ -3216,7 +3236,7 @@ namespace SellerScreen
                                 Margin = new Thickness(5, 5, 5, 5),
                                 VerticalContentAlignment = VerticalAlignment.Center,
                                 HorizontalContentAlignment = HorizontalAlignment.Center,
-                                Content = $"{SoldSlotNumber[i]}",
+                                Content = $"{StaticsDaySoldSlotNumber[i]}",
                             };
 
                             Label lbl4 = new Label
@@ -3226,20 +3246,20 @@ namespace SellerScreen
                                 Margin = new Thickness(5, 5, 5, 5),
                                 VerticalContentAlignment = VerticalAlignment.Center,
                                 HorizontalContentAlignment = HorizontalAlignment.Center,
-                                Content = $"{SoldSlotCash[i]}",
+                                Content = $"{StaticsDaySoldSlotCash[i]}",
                             };
 
                             PieSeries series2 = new PieSeries()
                             {
                                 Title = "Produkt " + (i+1),
-                                Values = new ChartValues<double> { SoldSlotCash[i] },
+                                Values = new ChartValues<double> { StaticsDaySoldSlotCash[i] },
                                 DataLabels = true,
                                 LabelPoint = labelPoint
                             };
 
                             for (int t = 0; t < 10; t++)
                             {
-                                bool endsWithSearchResult = SoldSlotCash[i].ToString().EndsWith($",{t}", StringComparison.CurrentCultureIgnoreCase);
+                                bool endsWithSearchResult = StaticsDaySoldSlotCash[i].ToString().EndsWith($",{t}", StringComparison.CurrentCultureIgnoreCase);
                                 if (endsWithSearchResult == true)
                                 {
                                     lbl4.Content += "0";
@@ -3305,10 +3325,10 @@ namespace SellerScreen
 
                     double gottenCash = 0;
                     int soldProducts = 0;
-                    for (int i = 0; i < SoldSlotName.Length; i++)
+                    for (int i = 0; i < StaticsDaySoldSlotName.Length; i++)
                     {
-                        gottenCash += SoldSlotCash[i];
-                        soldProducts += SoldSlotNumber[i];
+                        gottenCash += StaticsDaySoldSlotCash[i];
+                        soldProducts += StaticsDaySoldSlotNumber[i];
                     }
                     StaticsDayGottenCashNumberLbl.Content = $"{gottenCash}";
                     for (int t = 0; t < 10; t++)
@@ -3322,11 +3342,11 @@ namespace SellerScreen
                     StaticsDayGottenCashNumberLbl.Content += "€";
 
                     StaticsDaySoldProductsNumberLbl.Content = $"{soldProducts}";
-                    StaticsDayLostProductsNumberLbl.Content = $"{LostProducts}";
-                    StaticsDayLostCashNumberLbl.Content = $"{LostCash}";
+                    StaticsDayLostProductsNumberLbl.Content = $"{StaticsDayLostProducts}";
+                    StaticsDayLostCashNumberLbl.Content = $"{StaticsDayLostCash}";
                     for (int t = 0; t < 10; t++)
                     {
-                        bool endsWithSearchResult = LostCash.ToString().EndsWith($",{t}", StringComparison.CurrentCultureIgnoreCase);
+                        bool endsWithSearchResult = StaticsDayLostCash.ToString().EndsWith($",{t}", StringComparison.CurrentCultureIgnoreCase);
                         if (endsWithSearchResult == true)
                         {
                             StaticsDayLostCashNumberLbl.Content += "0";
@@ -3542,17 +3562,17 @@ namespace SellerScreen
             SaveStorage();
 
             logWindow.NewLog("Setting up TotalStatics...", 3);
-            startDate = DateTime.Today;
-            totalCustomers = 0;
-            totalSoldProducts = 0;
-            totalGottenCash = 0;
-            totalLostCash = 0;
-            totalLostProducts = 0;
+            StaticsTotalStartDate = DateTime.Today;
+            StaticsTotalCustomers = 0;
+            StaticsTotalSoldProducts = 0;
+            StaticsTotalGottenCash = 0;
+            StaticsTotalLostCash = 0;
+            StaticsTotalLostProducts = 0;
             SaveTotalStatics();
 
-            CommissioningModePanel.Visibility = Visibility.Collapsed;
+            InstallationModePanel.Visibility = Visibility.Collapsed;
             TopBar.IsEnabled = true;
-            commissioningMode = false;
+            AppInstallationMode = false;
             MessageBox.Show("Die Anwendung wurde aktiviert!", GetAssemblyTitle(), MessageBoxButton.OK, MessageBoxImage.Information);
             Reload();
         }

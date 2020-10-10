@@ -176,7 +176,6 @@ C:\Users\Tom Mohr\Source\Repos\SellerScreen\SellerScreen\bin\Debug\ro\Xceed.Wpf.
 C:\Users\Tom Mohr\Source\Repos\SellerScreen\SellerScreen\bin\Debug\ru\Xceed.Wpf.AvalonDock.resources.dll
 C:\Users\Tom Mohr\Source\Repos\SellerScreen\SellerScreen\bin\Debug\sv\Xceed.Wpf.AvalonDock.resources.dll
 C:\Users\Tom Mohr\Source\Repos\SellerScreen\SellerScreen\bin\Debug\zh-Hans\Xceed.Wpf.AvalonDock.resources.dll
-C:\Users\Tom Mohr\Source\Repos\SellerScreen\SellerScreen\obj\Debug\SellerScreen.csprojAssemblyReference.cache
 C:\Users\Tom Mohr\Source\Repos\SellerScreen\SellerScreen\obj\Debug\EditStorageSlot.baml
 C:\Users\Tom Mohr\Source\Repos\SellerScreen\SellerScreen\obj\Debug\MainWindow.baml
 C:\Users\Tom Mohr\Source\Repos\SellerScreen\SellerScreen\obj\Debug\EditStorageSlot.g.cs

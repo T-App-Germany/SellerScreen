@@ -109,11 +109,11 @@ namespace SellerScreen
         private bool commissioningMode = false;
         private string AppTheme = "System";
         private readonly Random rnd = new Random();
-        private int cloudCount = -1;
-        private int page = 0;
+        private short cloudCount = -1;
+        private short page = 0;
 
         private short StorageSlots = 0;
-        private readonly int StorageLimitedNumber = 10;
+        private readonly short StorageLimitedNumber = 10;
         private bool[] StorageSlotStatus = Array.Empty<bool>();
         private short[] StorageSlotNumber = Array.Empty<short>();
         private double[] StorageSlotPrice = Array.Empty<double>();
@@ -130,10 +130,10 @@ namespace SellerScreen
         private short[] SoldSlotNumber = Array.Empty<short>();
         private double[] SoldSlotCash = Array.Empty<double>();
         private double[] SoldSlotSinglePrice = Array.Empty<double>();
-        private int LostProducts;
+        private short LostProducts;
         private double LostCash;
-        private TimeSpan[] pcTime = new TimeSpan[2];
-        private int[] pcUsers = new int[2];
+        private TimeSpan[] pcTime = Array.Empty<TimeSpan>();
+        private short[] pcUsers = Array.Empty<short>();
         private string[] userList;
 
         private DateTime startDate;
@@ -143,17 +143,17 @@ namespace SellerScreen
         private int totalLostProducts;
         private double totalLostCash;
         private readonly TimeSpan[] totalPcTime = new TimeSpan[2];
-        private readonly int[] totalPcUsers = new int[2];
+        private readonly short[] totalPcUsers = new short[2];
 
         private readonly string[] mostSoldProductsName = new string[5];
         private readonly string[] highestEarningsProductsName = new string[5];
-        private readonly int[] mostSoldProductsNumber = new int[5];
+        private readonly short[] mostSoldProductsNumber = new short[5];
         private readonly double[] highestEarningsProductsNumber = new double[5];
         private double[] mostSoldProductsSinglePrice = new double[5];
         private double[] highestEarningsProductsSinglePrice = new double[5];
 
         private string[] productsNameList = Array.Empty<string>();
-        private int[] productsNumberList = Array.Empty<int>();
+        private short[] productsNumberList = Array.Empty<short>();
         private double[] productsCashList = Array.Empty<double>();
         private double[] productsSinglePriceList = Array.Empty<double>();
 
@@ -364,7 +364,7 @@ namespace SellerScreen
             TopBar.IsEnabled = false;
         }
 
-        private void PageChange(int newPage)
+        private void PageChange(short newPage)
         {
             bool error = false;
             page = newPage;
@@ -3293,15 +3293,15 @@ namespace SellerScreen
                     StaticsDayChartOfCash.Series = numbers;
                     StaticsDayChartOfNumbers.Series = cashs;
 
-                    StaticsDayPc1TimeLbl.Content = pcTime[0].Hours.ToString();
-                    StaticsDayPc2TimeLbl.Content = pcTime[1].Hours.ToString();
-                    StaticsDayPc1UsersLbl.Content = pcUsers[0].ToString();
-                    StaticsDayPc2UsersLbl.Content = pcUsers[1].ToString();
+                    //StaticsDayPc1TimeLbl.Content = pcTime[0].Hours.ToString();
+                    //StaticsDayPc2TimeLbl.Content = pcTime[1].Hours.ToString();
+                    //StaticsDayPc1UsersLbl.Content = pcUsers[0].ToString();
+                    //StaticsDayPc2UsersLbl.Content = pcUsers[1].ToString();
 
-                    StaticsDayPcUsersChart_PC1.Values = new ChartValues<int> { pcUsers[0] };
-                    StaticsDayPcUsersChart_PC2.Values = new ChartValues<int> { pcUsers[1] };
-                    StaticsDayPcTimeChart_PC1.Values = new ChartValues<int> { pcTime[0].Hours };
-                    StaticsDayPcTimeChart_PC2.Values = new ChartValues<int> { pcTime[1].Hours };
+                    //StaticsDayPcUsersChart_PC1.Values = new ChartValues<int> { pcUsers[0] };
+                    //StaticsDayPcUsersChart_PC2.Values = new ChartValues<int> { pcUsers[1] };
+                    //StaticsDayPcTimeChart_PC1.Values = new ChartValues<int> { pcTime[0].Hours };
+                    //StaticsDayPcTimeChart_PC2.Values = new ChartValues<int> { pcTime[1].Hours };
 
                     double gottenCash = 0;
                     int soldProducts = 0;

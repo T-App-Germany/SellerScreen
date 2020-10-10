@@ -11,11 +11,11 @@ namespace SellerScreen
         public short[] SoldSlotNumber = Array.Empty<short>();
         public double[] SoldSlotCash = Array.Empty<double>();
         public double[] SoldSlotSinglePrice = Array.Empty<double>();
-        public int LostProducts;
+        public short LostProducts;
         public double LostCash;
 
-        public TimeSpan[] pcTime = new TimeSpan[2];
-        public int[] pcUsers = new int[2];
+        public TimeSpan[] pcTime = Array.Empty<TimeSpan>();
+        public short[] pcUsers = Array.Empty<short>();
         public string[] userList;
 
         public void Save()

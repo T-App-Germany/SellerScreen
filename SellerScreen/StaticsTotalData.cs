@@ -14,18 +14,18 @@ namespace SellerScreen
         public int totalLostProducts;
         public double totalLostCash;
 
-        public TimeSpan[] totalPcTime = new TimeSpan[2];
-        public int[] totalPcUsers = new int[2];
+        public TimeSpan[] totalPcTime = Array.Empty<TimeSpan>();
+        public short[] totalPcUsers = Array.Empty<short>();
 
         public string[] mostSoldProductsName = new string[5];
         public string[] highestEarningsProductsName = new string[5];
-        public int[] mostSoldProductsNumber = new int[5];
+        public short[] mostSoldProductsNumber = new short[5];
         public double[] highestEarningsProductsNumber = new double[5];
         public double[] mostSoldProductsSinglePrice = new double[5];
         public double[] highestEarningsProductsSinglePrice = new double[5];
 
         public string[] productsNameList = Array.Empty<string>();
-        public int[] productsNumberList = Array.Empty<int>();
+        public short[] productsNumberList = Array.Empty<short>();
         public double[] productsCashList = Array.Empty<double>();
         public double[] productsSinglePriceList = Array.Empty<double>();
 

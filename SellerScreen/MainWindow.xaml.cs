@@ -2554,113 +2554,113 @@ namespace SellerScreen
         #region Statics
         private void SaveTotalStatics()
         {
-            for (int i = 0; i < productsNumberList.Length; i++)
-            {
-                if (productsNumberList[i] > mostSoldProductsNumber[0])
-                {
-                    mostSoldProductsNumber[4] = mostSoldProductsNumber[3];
-                    mostSoldProductsNumber[3] = mostSoldProductsNumber[2];
-                    mostSoldProductsNumber[2] = mostSoldProductsNumber[1];
-                    mostSoldProductsNumber[1] = mostSoldProductsNumber[0];
-                    mostSoldProductsNumber[0] = productsNumberList[i];
+            //for (int i = 0; i < productsNumberList.Length; i++)
+            //{
+            //    if (productsNumberList[i] > mostSoldProductsNumber[0])
+            //    {
+            //        mostSoldProductsNumber[4] = mostSoldProductsNumber[3];
+            //        mostSoldProductsNumber[3] = mostSoldProductsNumber[2];
+            //        mostSoldProductsNumber[2] = mostSoldProductsNumber[1];
+            //        mostSoldProductsNumber[1] = mostSoldProductsNumber[0];
+            //        mostSoldProductsNumber[0] = productsNumberList[i];
 
-                    mostSoldProductsName[4] = mostSoldProductsName[3];
-                    mostSoldProductsName[3] = mostSoldProductsName[2];
-                    mostSoldProductsName[2] = mostSoldProductsName[1];
-                    mostSoldProductsName[1] = mostSoldProductsName[0];
-                    mostSoldProductsName[0] = productsNameList[i];
-                }
-                else if (productsNumberList[i] > mostSoldProductsNumber[1])
-                {
-                    mostSoldProductsNumber[4] = mostSoldProductsNumber[3];
-                    mostSoldProductsNumber[3] = mostSoldProductsNumber[2];
-                    mostSoldProductsNumber[2] = mostSoldProductsNumber[1];
-                    mostSoldProductsNumber[1] = productsNumberList[i];
+            //        mostSoldProductsName[4] = mostSoldProductsName[3];
+            //        mostSoldProductsName[3] = mostSoldProductsName[2];
+            //        mostSoldProductsName[2] = mostSoldProductsName[1];
+            //        mostSoldProductsName[1] = mostSoldProductsName[0];
+            //        mostSoldProductsName[0] = productsNameList[i];
+            //    }
+            //    else if (productsNumberList[i] > mostSoldProductsNumber[1])
+            //    {
+            //        mostSoldProductsNumber[4] = mostSoldProductsNumber[3];
+            //        mostSoldProductsNumber[3] = mostSoldProductsNumber[2];
+            //        mostSoldProductsNumber[2] = mostSoldProductsNumber[1];
+            //        mostSoldProductsNumber[1] = productsNumberList[i];
 
-                    mostSoldProductsName[4] = mostSoldProductsName[3];
-                    mostSoldProductsName[3] = mostSoldProductsName[2];
-                    mostSoldProductsName[2] = mostSoldProductsName[1];
-                    mostSoldProductsName[1] = productsNameList[i];
-                }
-                else if (productsNumberList[i] > mostSoldProductsNumber[2])
-                {
-                    mostSoldProductsNumber[4] = mostSoldProductsNumber[3];
-                    mostSoldProductsNumber[3] = mostSoldProductsNumber[2];
-                    mostSoldProductsNumber[2] = productsNumberList[i];
+            //        mostSoldProductsName[4] = mostSoldProductsName[3];
+            //        mostSoldProductsName[3] = mostSoldProductsName[2];
+            //        mostSoldProductsName[2] = mostSoldProductsName[1];
+            //        mostSoldProductsName[1] = productsNameList[i];
+            //    }
+            //    else if (productsNumberList[i] > mostSoldProductsNumber[2])
+            //    {
+            //        mostSoldProductsNumber[4] = mostSoldProductsNumber[3];
+            //        mostSoldProductsNumber[3] = mostSoldProductsNumber[2];
+            //        mostSoldProductsNumber[2] = productsNumberList[i];
 
-                    mostSoldProductsName[4] = mostSoldProductsName[3];
-                    mostSoldProductsName[3] = mostSoldProductsName[2];
-                    mostSoldProductsName[2] = productsNameList[i];
-                }
-                else if (productsNumberList[i] > mostSoldProductsNumber[3])
-                {
-                    mostSoldProductsNumber[4] = mostSoldProductsNumber[3];
-                    mostSoldProductsNumber[3] = productsNumberList[i];
+            //        mostSoldProductsName[4] = mostSoldProductsName[3];
+            //        mostSoldProductsName[3] = mostSoldProductsName[2];
+            //        mostSoldProductsName[2] = productsNameList[i];
+            //    }
+            //    else if (productsNumberList[i] > mostSoldProductsNumber[3])
+            //    {
+            //        mostSoldProductsNumber[4] = mostSoldProductsNumber[3];
+            //        mostSoldProductsNumber[3] = productsNumberList[i];
 
-                    mostSoldProductsName[4] = mostSoldProductsName[3];
-                    mostSoldProductsName[3] = productsNameList[i];
-                }
-                else if (productsNumberList[i] > mostSoldProductsNumber[4])
-                {
-                    mostSoldProductsNumber[4] = productsNumberList[i];
+            //        mostSoldProductsName[4] = mostSoldProductsName[3];
+            //        mostSoldProductsName[3] = productsNameList[i];
+            //    }
+            //    else if (productsNumberList[i] > mostSoldProductsNumber[4])
+            //    {
+            //        mostSoldProductsNumber[4] = productsNumberList[i];
 
-                    mostSoldProductsName[4] = productsNameList[i];
-                }
-            }
+            //        mostSoldProductsName[4] = productsNameList[i];
+            //    }
+            //}
 
-            for (int i = 0; i < productsCashList.Length; i++)
-            {
-                if (productsCashList[i] > highestEarningsProductsNumber[0])
-                {
-                    highestEarningsProductsNumber[4] = highestEarningsProductsNumber[3];
-                    highestEarningsProductsNumber[3] = highestEarningsProductsNumber[2];
-                    highestEarningsProductsNumber[2] = highestEarningsProductsNumber[1];
-                    highestEarningsProductsNumber[1] = highestEarningsProductsNumber[0];
-                    highestEarningsProductsNumber[0] = productsCashList[i];
+            //for (int i = 0; i < productsCashList.Length; i++)
+            //{
+            //    if (productsCashList[i] > highestEarningsProductsNumber[0])
+            //    {
+            //        highestEarningsProductsNumber[4] = highestEarningsProductsNumber[3];
+            //        highestEarningsProductsNumber[3] = highestEarningsProductsNumber[2];
+            //        highestEarningsProductsNumber[2] = highestEarningsProductsNumber[1];
+            //        highestEarningsProductsNumber[1] = highestEarningsProductsNumber[0];
+            //        highestEarningsProductsNumber[0] = productsCashList[i];
 
-                    highestEarningsProductsName[4] = highestEarningsProductsName[3];
-                    highestEarningsProductsName[3] = highestEarningsProductsName[2];
-                    highestEarningsProductsName[2] = highestEarningsProductsName[1];
-                    highestEarningsProductsName[1] = highestEarningsProductsName[0];
-                    highestEarningsProductsName[0] = productsNameList[i];
-                }
-                else if (productsCashList[i] > highestEarningsProductsNumber[1])
-                {
-                    highestEarningsProductsNumber[4] = highestEarningsProductsNumber[3];
-                    highestEarningsProductsNumber[3] = highestEarningsProductsNumber[2];
-                    highestEarningsProductsNumber[2] = highestEarningsProductsNumber[1];
-                    highestEarningsProductsNumber[1] = productsNumberList[i];
+            //        highestEarningsProductsName[4] = highestEarningsProductsName[3];
+            //        highestEarningsProductsName[3] = highestEarningsProductsName[2];
+            //        highestEarningsProductsName[2] = highestEarningsProductsName[1];
+            //        highestEarningsProductsName[1] = highestEarningsProductsName[0];
+            //        highestEarningsProductsName[0] = productsNameList[i];
+            //    }
+            //    else if (productsCashList[i] > highestEarningsProductsNumber[1])
+            //    {
+            //        highestEarningsProductsNumber[4] = highestEarningsProductsNumber[3];
+            //        highestEarningsProductsNumber[3] = highestEarningsProductsNumber[2];
+            //        highestEarningsProductsNumber[2] = highestEarningsProductsNumber[1];
+            //        highestEarningsProductsNumber[1] = productsNumberList[i];
 
-                    highestEarningsProductsName[4] = highestEarningsProductsName[3];
-                    highestEarningsProductsName[3] = highestEarningsProductsName[2];
-                    highestEarningsProductsName[2] = highestEarningsProductsName[1];
-                    highestEarningsProductsName[1] = productsNameList[i];
-                }
-                else if (productsCashList[i] > highestEarningsProductsNumber[2])
-                {
-                    highestEarningsProductsNumber[4] = highestEarningsProductsNumber[3];
-                    highestEarningsProductsNumber[3] = highestEarningsProductsNumber[2];
-                    highestEarningsProductsNumber[2] = productsNumberList[i];
+            //        highestEarningsProductsName[4] = highestEarningsProductsName[3];
+            //        highestEarningsProductsName[3] = highestEarningsProductsName[2];
+            //        highestEarningsProductsName[2] = highestEarningsProductsName[1];
+            //        highestEarningsProductsName[1] = productsNameList[i];
+            //    }
+            //    else if (productsCashList[i] > highestEarningsProductsNumber[2])
+            //    {
+            //        highestEarningsProductsNumber[4] = highestEarningsProductsNumber[3];
+            //        highestEarningsProductsNumber[3] = highestEarningsProductsNumber[2];
+            //        highestEarningsProductsNumber[2] = productsNumberList[i];
 
-                    highestEarningsProductsName[4] = highestEarningsProductsName[3];
-                    highestEarningsProductsName[3] = highestEarningsProductsName[2];
-                    highestEarningsProductsName[2] = productsNameList[i];
-                }
-                else if (productsCashList[i] > highestEarningsProductsNumber[3])
-                {
-                    highestEarningsProductsNumber[4] = highestEarningsProductsNumber[3];
-                    highestEarningsProductsNumber[3] = productsNumberList[i];
+            //        highestEarningsProductsName[4] = highestEarningsProductsName[3];
+            //        highestEarningsProductsName[3] = highestEarningsProductsName[2];
+            //        highestEarningsProductsName[2] = productsNameList[i];
+            //    }
+            //    else if (productsCashList[i] > highestEarningsProductsNumber[3])
+            //    {
+            //        highestEarningsProductsNumber[4] = highestEarningsProductsNumber[3];
+            //        highestEarningsProductsNumber[3] = productsNumberList[i];
 
-                    highestEarningsProductsName[4] = highestEarningsProductsName[3];
-                    highestEarningsProductsName[3] = productsNameList[i];
-                }
-                else if (productsCashList[i] > highestEarningsProductsNumber[4])
-                {
-                    highestEarningsProductsNumber[4] = productsNumberList[i];
+            //        highestEarningsProductsName[4] = highestEarningsProductsName[3];
+            //        highestEarningsProductsName[3] = productsNameList[i];
+            //    }
+            //    else if (productsCashList[i] > highestEarningsProductsNumber[4])
+            //    {
+            //        highestEarningsProductsNumber[4] = productsNumberList[i];
 
-                    highestEarningsProductsName[4] = productsNameList[i];
-                }
-            }
+            //        highestEarningsProductsName[4] = productsNameList[i];
+            //    }
+            //}
 
             StaticsTotalData staTS = new StaticsTotalData
             {

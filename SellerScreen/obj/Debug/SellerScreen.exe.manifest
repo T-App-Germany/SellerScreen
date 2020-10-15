@@ -91,14 +91,14 @@
     </dependentAssembly>
   </dependency>
   <dependency>
-    <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="SellerScreen.exe" size="1198592">
+    <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="SellerScreen.exe" size="1201152">
       <assemblyIdentity name="SellerScreen" version="1.0.0.0" language="neutral" processorArchitecture="msil" />
       <hash>
         <dsig:Transforms>
           <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
         </dsig:Transforms>
         <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha256" />
-        <dsig:DigestValue>DwaUK8tC+qswzgNxzM2wPrnXi4+SD6WGDwGyEXBF6Ko=</dsig:DigestValue>
+        <dsig:DigestValue>73N6AnIVUYVX4CNX9e3uQrBsB5PnUpwmCnISvJYLNK8=</dsig:DigestValue>
       </hash>
     </dependentAssembly>
   </dependency>

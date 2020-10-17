@@ -9,8 +9,10 @@ namespace SellerScreen
         public double slotPrice = 0;
         public bool slotStatus = false;
         public short slotNumber = 0;
-        private short id = 0;
-        private string task = "";
+        private readonly short id = 0;
+        private readonly string task = "";
+        private readonly ThemeData themeData = new ThemeData();
+        private readonly string AppThemeStr = "System";
 
         public EditStorageSlot(string windowTask, short idForTask)
         {
@@ -49,6 +51,8 @@ namespace SellerScreen
                 DeactivateBtn.IsChecked = false;
                 Title = $"Produkt hinzufügen";
             }
+
+            SetAppTheme();
         }
 
         private void ApplyBtn_Click(object sender, RoutedEventArgs e)
@@ -56,7 +60,7 @@ namespace SellerScreen
             slotName = SlotNameTxtBox.Text;
             slotNumber += short.Parse(SlotAddNumberTxtBox.Text);
             slotPrice = double.Parse(SlotPriceTxtBox.Text);
-            
+
             DialogResult = true;
         }
 
@@ -76,6 +80,44 @@ namespace SellerScreen
         {
             DeactivateBtn.IsChecked = false;
             slotStatus = true;
+        }
+
+        private void SetAppTheme()
+        {
+            if (AppThemeStr == "System")
+            {
+                string initialTheme = themeData.GetWindowsAppTheme().ToString();
+                if (initialTheme == "Dark")
+                {
+                    ApplyDarkTheme();
+                }
+                else if (initialTheme == "Light")
+                {
+                    ApplyLightTheme();
+                }
+            }
+            else if (AppThemeStr == "Light")
+            {
+                ApplyLightTheme();
+            }
+            else if (AppThemeStr == "Dark")
+            {
+                ApplyDarkTheme();
+            }
+        }
+
+        private void ApplyLightTheme()
+        {
+            TextFontColor.Background = themeData.GetLightTheme("TextFontColor");
+            SideBarsColor.Background = themeData.GetLightTheme("SideBarsColor");
+            PageBackgroudColor.Background = themeData.GetLightTheme("PageBackgroudColor");
+        }
+
+        private void ApplyDarkTheme()
+        {
+            TextFontColor.Background = themeData.GetDarkTheme("TextFontColor");
+            SideBarsColor.Background = themeData.GetDarkTheme("SideBarsColor");
+            PageBackgroudColor.Background = themeData.GetDarkTheme("PageBackgroudColor");
         }
     }
 }

@@ -7,14 +7,14 @@
     <framework targetVersion="4.8" profile="Full" supportedRuntime="4.0.30319" />
   </compatibleFrameworks>
   <dependency>
-    <dependentAssembly dependencyType="install" codebase="SellerScreen.exe.manifest" size="36366">
+    <dependentAssembly dependencyType="install" codebase="SellerScreen.exe.manifest" size="37008">
       <assemblyIdentity name="SellerScreen.exe" version="1.0.0.0" publicKeyToken="0000000000000000" language="neutral" processorArchitecture="msil" type="win32" />
       <hash>
         <dsig:Transforms>
           <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
         </dsig:Transforms>
         <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha256" />
-        <dsig:DigestValue>a7BYBIPJ9kmENuPgcYvvsYAz6DFA4vcW8UMJ8B+Wkxw=</dsig:DigestValue>
+        <dsig:DigestValue>PM54o0a7pBYFs2X1NRwe+DBMTaQ/QsQSeyasZmMN++M=</dsig:DigestValue>
       </hash>
     </dependentAssembly>
   </dependency>

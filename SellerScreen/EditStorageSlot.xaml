@@ -30,8 +30,6 @@
                 <Grid x:Name="TextFontColor" Background="White"/>
                 <Grid x:Name="SideBarsColor" Background="#48484A"/>
                 <Grid x:Name="PageBackgroudColor" Background="#FF323232"/>
-                <Grid x:Name="SeperatorColor" Background="White"/>
-                <Grid x:Name="ChromeBtnColor" Background="#FFF6F6F6"/>
                 <Border x:Name="WindowHeight" Height="{Binding Height, ElementName=Window}"/>
             </Grid>
             <StackPanel x:Name="TopBar" Background="{Binding Background, ElementName=SideBarsColor}" VerticalAlignment="Top">

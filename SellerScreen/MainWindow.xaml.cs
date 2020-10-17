@@ -1,6 +1,5 @@
 ﻿using LiveCharts;
 using LiveCharts.Wpf;
-using Microsoft.Win32;
 using System;
 using System.ComponentModel;
 using System.Globalization;
@@ -94,20 +93,21 @@ namespace SellerScreen
         }
 
         private DispatcherTimer MessageTimer { get; set; } = new DispatcherTimer();
-        private DispatcherTimer StaticsDaySelectionTimer{ get; set; } = new DispatcherTimer();
+        private DispatcherTimer StaticsDaySelectionTimer { get; set; } = new DispatcherTimer();
         private DispatcherTimer SideObjectsAniTimer { get; set; } = new DispatcherTimer();
+        public object RegistryKeyPath { get; private set; }
+
         private readonly LogWindow logWindow = new LogWindow();
         private readonly PathName pathN = new PathName();
-
-        private const string RegistryKeyPath = @"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize";
-        private const string RegistryValueName = "AppsUseLightTheme";
+        private readonly ThemeData themeData = new ThemeData();
 
         private bool loadTotalStaticsError = false;
         private bool loadDayStaticsError = false;
         private DateTime lastPayDate = DateTime.Today.AddDays(-5);
         private bool[] displayLogTypes = new bool[5];
         private bool AppInstallationMode = false;
-        private string AppTheme = "System";
+        private string AppThemeStr = "System";
+        private bool AppThemeChanged = false;
         private readonly Random rnd = new Random();
         private short SideObjectsCount = -1;
         private short WindowPage = 0;
@@ -202,11 +202,11 @@ namespace SellerScreen
                 Reload();
             }
 
-            PageChange(1);
-            SetWindowTheme();
+            PageChange(2);
+            SetAppTheme();
             CloseShop();
-            WatchTheme();
             RefreshMaximizeRestoreButton();
+            WatchTheme();
         }
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
@@ -272,6 +272,31 @@ namespace SellerScreen
         {
             RefreshMaximizeRestoreButton();
         }
+
+        private void WatchTheme()
+        {
+            var currentUser = WindowsIdentity.GetCurrent();
+            string query = string.Format(CultureInfo.InvariantCulture, @"SELECT * FROM RegistryValueChangeEvent WHERE Hive = 'HKEY_USERS' AND KeyPath = '{0}\\{1}' AND ValueName = '{2}'",
+                currentUser.User.Value, themeData.RegistryKeyPath.Replace(@"\", @"\\"), themeData.RegistryValueName);
+
+            try
+            {
+                var watcher = new ManagementEventWatcher(query);
+                watcher.EventArrived += (sender, args) =>
+                {
+                    if (AppThemeStr == "System")
+                    {
+                        AppThemeChanged = true;
+                    }
+                };
+
+                watcher.Start();
+            }
+            catch (Exception ex)
+            {
+                logWindow.NewLog($"Application is not able to read WindowsTheme! {ex.Message}", 2);
+            }
+        }
         #endregion
 
         #region Timer
@@ -315,6 +340,11 @@ namespace SellerScreen
                     };
 
                     img.BeginAnimation(MarginProperty, ani);
+
+                    if (AppThemeStr == "System" && AppThemeChanged == true)
+                    {
+                        SetAppTheme();
+                    }
                 }
                 catch (Exception)
                 {
@@ -348,7 +378,7 @@ namespace SellerScreen
 
                 }
 
-                SideObjectsCount = -1;
+                SideObjectsCount = -1;                
             }
         }
 
@@ -623,8 +653,8 @@ namespace SellerScreen
             LoadTotalStatics();
             LoadDayStatics(DateTime.Now.Date);
             BuildSettings();
-            BuildStorage(GetWindowsTheme());
-            BuildShop(GetWindowsTheme(), "storage");
+            BuildStorage(themeData.GetWindowsAppTheme().ToString());
+            BuildShop(themeData.GetWindowsAppTheme().ToString(), "storage");
             BuildTotalStatics();
             BuildDayStatics();
             MainProgBarHide();
@@ -656,79 +686,46 @@ namespace SellerScreen
             MainProgBar.BeginAnimation(HeightProperty, ani);
         }
 
-        private void WatchTheme()
+        private void SetAppTheme()
         {
-            var currentUser = WindowsIdentity.GetCurrent();
-            string query = string.Format(CultureInfo.InvariantCulture, @"SELECT * FROM RegistryValueChangeEvent WHERE Hive = 'HKEY_USERS' AND KeyPath = '{0}\\{1}' AND ValueName = '{2}'",
-                currentUser.User.Value, RegistryKeyPath.Replace(@"\", @"\\"), RegistryValueName);
-
-            try
+            if (AppThemeStr == "System")
             {
-                var watcher = new ManagementEventWatcher(query);
-                watcher.EventArrived += (sender, args) =>
-                {
-                    WindowsTheme newWindowsTheme = GetWindowsTheme();
-                    // React to new theme
-                    if (AppTheme == "System")
-                    {
-                        MessageBox.Show("Das System-App-Thema wurde geändert. Um dieses anzuwenden, müssen Sie in den Einstellungen das Thema manuell aktualisieren.", "Windows Thema", MessageBoxButton.OK, MessageBoxImage.Information);
-                    }
-                };
-
-                // Start listening for events
-                watcher.Start();
-            }
-            catch (Exception ex)
-            {
-                logWindow.NewLog($"Application is not able to read WindowsTheme! {ex.Message}", 2);
-            }
-        }
-
-        private static WindowsTheme GetWindowsTheme()
-        {
-            using (RegistryKey key = Registry.CurrentUser.OpenSubKey(RegistryKeyPath))
-            {
-                object registryValueObject = key?.GetValue(RegistryValueName);
-                if (registryValueObject == null)
-                {
-                    return WindowsTheme.Light;
-                }
-
-                int registryValue = (int)registryValueObject;
-
-                return registryValue > 0 ? WindowsTheme.Light : WindowsTheme.Dark;
-            }
-        }
-
-        private void SetWindowTheme()
-        {
-            if (AppTheme == "System")
-            {
-                WindowsTheme initialTheme = GetWindowsTheme();
-                if (initialTheme == WindowsTheme.Dark)
+                string initialTheme = themeData.GetWindowsAppTheme().ToString();
+                if (initialTheme == "Dark")
                     ApplyDarkTheme();
-                else if (initialTheme == WindowsTheme.Light)
+                else if (initialTheme == "Light")
                     ApplyLightTheme();
             }
-            else if (AppTheme == "Light")
+            else if (AppThemeStr == "Light")
                 ApplyLightTheme();
-            else if (AppTheme == "Dark")
+            else if (AppThemeStr == "Dark")
                 ApplyDarkTheme();
         }
 
         private void ApplyLightTheme()
         {
-            SeperatorColor.Background = (Brush)new BrushConverter().ConvertFrom("#FFA0A0A0");
-            ChromeBtnColor.Background = (Brush)new BrushConverter().ConvertFrom("#FF212121");
+            TextFontColor.Background = themeData.GetLightTheme("TextFontColor");
+            SideBarsColor.Background = themeData.GetLightTheme("SideBarsColor");
+            MainMenuGrid.Background = themeData.GetLightTheme("MainMenuGrid");
+            PageBackgroudColor.Background = themeData.GetLightTheme("PageBackgroudColor");
+            SeperatorColor.Background = themeData.GetLightTheme("SeperatorColor");
+            ChromeBtnColor.Background = themeData.GetLightTheme("ChromeBtnColor");
+
+            BuildStorage(AppThemeStr);
+            BuildShop(AppThemeStr, "storage");
         }
 
         private void ApplyDarkTheme()
         {
-            TextFontColor.Background = (Brush)new BrushConverter().ConvertFrom("#FFFFFFFF");
-            SideBarsColor.Background = (Brush)new BrushConverter().ConvertFrom("#48484A");
-            PageBackgroudColor.Background = (Brush)new BrushConverter().ConvertFrom("#FF323232");
-            SeperatorColor.Background = (Brush)new BrushConverter().ConvertFrom("#FFFFFFFF");
-            ChromeBtnColor.Background = (Brush)new BrushConverter().ConvertFrom("#FFF6F6F6");
+            TextFontColor.Background = themeData.GetDarkTheme("TextFontColor");
+            SideBarsColor.Background = themeData.GetDarkTheme("SideBarsColor");
+            MainMenuGrid.Background = themeData.GetDarkTheme("MainMenuGrid");
+            PageBackgroudColor.Background = themeData.GetDarkTheme("PageBackgroudColor");
+            SeperatorColor.Background = themeData.GetDarkTheme("SeperatorColor");
+            ChromeBtnColor.Background = themeData.GetDarkTheme("ChromeBtnColor");
+
+            BuildStorage(AppThemeStr);
+            BuildShop(AppThemeStr, "storage");
         }
 
         private void SlotItemMouseLeave(object sender, MouseEventArgs e)
@@ -951,7 +948,7 @@ namespace SellerScreen
             }
         }
 
-        private void BuildShop(WindowsTheme theme, string from)
+        private void BuildShop(string theme, string from)
         {
             int length = 0;
             string name = "";
@@ -1221,7 +1218,7 @@ namespace SellerScreen
                         }
                         else
                         {
-                            if (theme == WindowsTheme.Light)
+                            if (theme == "Light")
                                 slotScp.Background = Brushes.LightGray;
                             else
                                 slotScp.Background = (Brush)new BrushConverter().ConvertFrom("#FF555555");
@@ -1593,7 +1590,7 @@ namespace SellerScreen
             }
 
             GetMainPrice();
-            BuildShop(GetWindowsTheme(), "storage");
+            BuildShop(themeData.GetWindowsAppTheme().ToString(), "storage");
         }
 
         private void NewPurchaseBtn_Click(object sender, RoutedEventArgs e)
@@ -1626,7 +1623,7 @@ namespace SellerScreen
 
         private void CancelComplainPurchaseBtn_GotFocus(object sender, RoutedEventArgs e)
         {
-            BuildShop(GetWindowsTheme(), "statics");
+            BuildShop(themeData.GetWindowsAppTheme().ToString(), "statics");
         }
 
         private void CancelShoppingBtn_Click(object sender, RoutedEventArgs e)
@@ -1990,7 +1987,7 @@ namespace SellerScreen
             }
         }
 
-        private void BuildStorage(WindowsTheme theme)
+        private void BuildStorage(string theme)
         {
             if (StorageSlots == 0)
             {
@@ -2146,7 +2143,7 @@ namespace SellerScreen
                         }
                         else
                         {
-                            if (theme == WindowsTheme.Light)
+                            if (theme == "Light")
                                 slotScp.Background = Brushes.LightGray;
                             else
                                 slotScp.Background = (Brush)new BrushConverter().ConvertFrom("#FF555555");
@@ -2405,7 +2402,7 @@ namespace SellerScreen
 
                 SaveStorage();
                 LoadStorage();
-                BuildStorage(GetWindowsTheme());
+                BuildStorage(themeData.GetWindowsAppTheme().ToString());
             }
         }
 
@@ -2428,7 +2425,7 @@ namespace SellerScreen
                 StorageDeleteSpaces();
                 SaveStorage();
                 LoadStorage();
-                BuildStorage(GetWindowsTheme());
+                BuildStorage(themeData.GetWindowsAppTheme().ToString());
             }
         }
 
@@ -2462,7 +2459,7 @@ namespace SellerScreen
 
                 SaveStorage();
                 LoadStorage();
-                BuildStorage(GetWindowsTheme());
+                BuildStorage(themeData.GetWindowsAppTheme().ToString());
             }
         }
 
@@ -2481,7 +2478,7 @@ namespace SellerScreen
 
                 SaveStorage();
                 LoadStorage();
-                BuildStorage(GetWindowsTheme());
+                BuildStorage(themeData.GetWindowsAppTheme().ToString());
             }
         }
 
@@ -3434,7 +3431,7 @@ namespace SellerScreen
 
                 try
                 {
-                    AppTheme = setL.AppTheme;
+                    AppThemeStr = setL.AppTheme;
                 }
                 catch (Exception ex)
                 {
@@ -3458,7 +3455,7 @@ namespace SellerScreen
             {
                 setS.lastPayDate = lastPayDate;
                 setS.displayLogTypes = displayLogTypes;
-                setS.AppTheme = AppTheme;
+                setS.AppTheme = AppThemeStr;
                 setS.Save();
                 logWindow.NewLog($"Saving Settings successful", 1);
                 logWindow.NewLog($"Settings changed!", 4);
@@ -3475,11 +3472,30 @@ namespace SellerScreen
             try
             {
                 logWindow.displayLogTypes = displayLogTypes;
-                SettingsLogType0CheckBox.IsChecked = displayLogTypes[0];
-                SettingsLogType1CheckBox.IsChecked = displayLogTypes[1];
-                SettingsLogType2CheckBox.IsChecked = displayLogTypes[2];
-                SettingsLogType3CheckBox.IsChecked = displayLogTypes[3];
-                SettingsLogType4CheckBox.IsChecked = displayLogTypes[4];
+                SettingsLogType0CheckBox.IsOn = displayLogTypes[0];
+                SettingsLogType1CheckBox.IsOn = displayLogTypes[1];
+                SettingsLogType2CheckBox.IsOn = displayLogTypes[2];
+                SettingsLogType3CheckBox.IsOn = displayLogTypes[3];
+                SettingsLogType4CheckBox.IsOn = displayLogTypes[4];
+
+                if (AppThemeStr == "System")
+                {
+                    SettingsDesignSystemTogSw.IsOn = true;
+                    SettingsDesignDarkTogSw.IsOn = false;
+                    SettingsDesignLightTogSw.IsOn = false;
+                }
+                else if (AppThemeStr == "Light")
+                {
+                    SettingsDesignSystemTogSw.IsOn = false;
+                    SettingsDesignDarkTogSw.IsOn = false;
+                    SettingsDesignLightTogSw.IsOn = true;
+                }
+                else if (AppThemeStr == "Dark")
+                {
+                    SettingsDesignSystemTogSw.IsOn = false;
+                    SettingsDesignDarkTogSw.IsOn = true;
+                    SettingsDesignLightTogSw.IsOn = false;
+                }
 
                 logWindow.NewLog($"Building Settings successful", 1);
             }
@@ -3492,17 +3508,28 @@ namespace SellerScreen
 
         private void SettingsSaveBtn_Click(object sender, RoutedEventArgs e)
         {
+            //MsgBox msgBox = new MsgBox("Möchten Sie die Einstellungen wirklich speichern?", "Einstellungen speichern", MsgBox.MsgButtons.YesNo, MsgBox.MsgIcon.Error);
+            //msgBox.ShowDialog();
+
             if (MessageBox.Show("Möchten Sie die Einstellungen wirklich speichern?", "Einstellungen speichern", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
             {
-                displayLogTypes[0] = SettingsLogType0CheckBox.IsChecked.Value;
-                displayLogTypes[1] = SettingsLogType1CheckBox.IsChecked.Value;
-                displayLogTypes[2] = SettingsLogType2CheckBox.IsChecked.Value;
-                displayLogTypes[3] = SettingsLogType3CheckBox.IsChecked.Value;
-                displayLogTypes[4] = SettingsLogType4CheckBox.IsChecked.Value;
+                displayLogTypes[0] = SettingsLogType0CheckBox.IsOn;
+                displayLogTypes[1] = SettingsLogType1CheckBox.IsOn;
+                displayLogTypes[2] = SettingsLogType2CheckBox.IsOn;
+                displayLogTypes[3] = SettingsLogType3CheckBox.IsOn;
+                displayLogTypes[4] = SettingsLogType4CheckBox.IsOn;
+
+                if (SettingsDesignSystemTogSw.IsOn == true)
+                    AppThemeStr = "System";
+                else if (SettingsDesignLightTogSw.IsOn == true)
+                    AppThemeStr = "Light";
+                else if (SettingsDesignDarkTogSw.IsOn == true)
+                    AppThemeStr = "Dark";
 
                 SaveSettings();
                 LoadSettings();
                 BuildSettings();
+                SetAppTheme();
             }
         }
 
@@ -3595,6 +3622,36 @@ namespace SellerScreen
         private void RefreshBtn_Click(object sender, RoutedEventArgs e)
         {
             Reload();
+        }
+
+        private void SettingsDesignSystemTogSw_PreviewMouseDown(object sender, MouseButtonEventArgs e)
+        {
+            SettingsDesignDarkTogSw.IsOn = false;
+            SettingsDesignLightTogSw.IsOn = false;
+
+            SettingsDesignSystemTogSw.IsEnabled = false;
+            SettingsDesignDarkTogSw.IsEnabled = true;
+            SettingsDesignLightTogSw.IsEnabled = true;
+        }
+
+        private void SettingsDesignDarkTogSw_PreviewMouseDown(object sender, MouseButtonEventArgs e)
+        {
+            SettingsDesignSystemTogSw.IsOn = false;
+            SettingsDesignLightTogSw.IsOn = false;
+
+            SettingsDesignSystemTogSw.IsEnabled = true;
+            SettingsDesignDarkTogSw.IsEnabled = false;
+            SettingsDesignLightTogSw.IsEnabled = true;
+        }
+
+        private void SettingsDesignLightTogSw_PreviewMouseDown(object sender, MouseButtonEventArgs e)
+        {
+            SettingsDesignSystemTogSw.IsOn = false;
+            SettingsDesignDarkTogSw.IsOn = false;
+
+            SettingsDesignSystemTogSw.IsEnabled = true;
+            SettingsDesignDarkTogSw.IsEnabled = true;
+            SettingsDesignLightTogSw.IsEnabled = false;
         }
         #endregion
     }

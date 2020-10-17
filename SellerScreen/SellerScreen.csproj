@@ -108,6 +108,9 @@
     <Reference Include="System.Xaml">
       <RequiredTargetFramework>4.0</RequiredTargetFramework>
     </Reference>
+    <Reference Include="ToggleSwitch">
+      <HintPath>..\..\..\..\Downloads\WPF_ToggleSwitch-master\WPF_ToggleSwitch-master\ToggleSwitch\bin\Debug\ToggleSwitch.dll</HintPath>
+    </Reference>
     <Reference Include="WindowsBase" />
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
@@ -138,6 +141,9 @@
     <Compile Include="LogWindow.xaml.cs">
       <DependentUpon>LogWindow.xaml</DependentUpon>
     </Compile>
+    <Compile Include="MsgBox.xaml.cs">
+      <DependentUpon>MsgBox.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Properties\Resources.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
@@ -147,6 +153,7 @@
     <Compile Include="StaticsDayData.cs" />
     <Compile Include="StaticsTotalData.cs" />
     <Compile Include="StorageData.cs" />
+    <Compile Include="ThemeData.cs" />
     <Page Include="EditStorageSlot.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -173,9 +180,6 @@
     </Page>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="MsgBox.xaml.cs">
-      <DependentUpon>MsgBox.xaml</DependentUpon>
-    </Compile>
     <Compile Include="PathName.cs" />
     <Compile Include="Properties\AssemblyInfo.cs">
       <SubType>Code</SubType>

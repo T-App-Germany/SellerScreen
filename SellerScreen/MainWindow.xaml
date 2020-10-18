@@ -571,7 +571,7 @@
                             </StackPanel>
                         </ScrollViewer>
                     </Grid>
-                    <Grid x:Name="Page2Grid" Visibility="Visible">
+                    <Grid x:Name="Page2Grid" Visibility="Collapsed">
                         <StackPanel>
                             <TextBlock HorizontalAlignment="Left" Margin="10" Text="Einstellungen" VerticalAlignment="Top" TextTrimming="CharacterEllipsis" FontSize="25"/>
                             <StackPanel x:Name="Page2ContentGrid">
@@ -1280,7 +1280,7 @@
                                                     <StackPanel Orientation="Horizontal">
                                                         <StackPanel>
                                                             <StackPanel Background="{Binding Background, ElementName=SideBarsColor}">
-                                                                <Label Content="Verkaufte Produkte (Anzahl)" FontSize="18" Margin="5"/>
+                                                                <Label Content="Benutzer pro PC" FontSize="18" Margin="5"/>
                                                             </StackPanel>
                                                             <Wpf:PieChart x:Name="StaticsTotalPcTimeChart" Margin="10" Width="150" DisableAnimations="True" Hoverable="False" Height="150" TooltipTimeout="0">
                                                                 <Wpf:PieChart.Series>
@@ -1299,7 +1299,7 @@
                                                         </StackPanel>
                                                         <StackPanel>
                                                             <StackPanel Background="{Binding Background, ElementName=SideBarsColor}">
-                                                                <Label Content="Einnahmen in € (EUR)" FontSize="18" Margin="5"/>
+                                                                <Label Content="Nutzungszeit pro PC" FontSize="18" Margin="5"/>
                                                             </StackPanel>
                                                             <Wpf:PieChart x:Name="StaticsTotalPcUsersChart" Margin="10" Width="150" DisableAnimations="True" Hoverable="False" Height="150" TooltipTimeout="0">
                                                                 <Wpf:PieChart.Series>
@@ -1662,7 +1662,7 @@
                         </Grid>
                     </Grid>
                     <Grid x:Name="Page7Grid" Visibility="Collapsed"/>
-                    <Grid x:Name="Page8Grid" Visibility="Collapsed">
+                    <Grid x:Name="Page8Grid" Visibility="Visible">
                         <TextBlock HorizontalAlignment="Left" Margin="10" Text="Lager" VerticalAlignment="Top" TextTrimming="CharacterEllipsis" FontSize="25"/>
                         <StackPanel x:Name="Page8ContentGrid" Margin="0,50,0,0">
                             <GroupBox Header="Werkzeuge" Margin="10" FontSize="15">
@@ -1711,16 +1711,18 @@
                                     </Button>
                                     <Button x:Name="StorageActivedSlotBtn" Margin="10" FontSize="20" Click="StorageActivedSlotBtn_Click" ToolTip="Ausgewählte Produktplätze aktivieren" IsEnabled="False">
                                         <StackPanel Orientation="Horizontal">
-                                            <Viewbox xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation">
+                                            <Viewbox>
                                                 <Rectangle Width="20" Height="20">
                                                     <Rectangle.Fill>
                                                         <DrawingBrush>
                                                             <DrawingBrush.Drawing>
                                                                 <DrawingGroup>
-                                                                    <GeometryDrawing Brush="#00FFFFFF" Geometry="F1M16,16L0,16 0,0 16,0z" />
-                                                                    <GeometryDrawing Brush="#FFF6F6F6" Geometry="F1M8,16C3.589,16 0,12.411 0,8 0,3.589 3.589,0 8,0 12.411,0 16,3.589 16,8 16,12.411 12.411,16 8,16" />
-                                                                    <GeometryDrawing Brush="#FF329932" Geometry="F1M6.2998,12.3887L3.0428,9.1317 4.4568,7.7177 6.2998,9.5607 11.5428,4.3177 12.9568,5.7317z M7.9998,0.999700000000001C4.1338,0.999700000000001 0.9998,4.1337 0.9998,7.9997 0.9998,11.8667 4.1338,14.9997 7.9998,14.9997 11.8658,14.9997 14.9998,11.8667 14.9998,7.9997 14.9998,4.1337 11.8658,0.999700000000001 7.9998,0.999700000000001" />
-                                                                    <GeometryDrawing Brush="#FFFFFFFF" Geometry="F1M6.2998,12.3887L3.0428,9.1317 4.4568,7.7177 6.2998,9.5607 11.5428,4.3177 12.9568,5.7317z" />
+                                                                    <DrawingGroup.Children>
+                                                                        <GeometryDrawing Brush="#00FFFFFF" Geometry="F1M16,16L0,16 0,0 16,0z" />
+                                                                        <GeometryDrawing Brush="#FFF6F6F6" Geometry="F1M3.9591,0.999700000000001L9.99999999997669E-05,7.8567 9.99999999997669E-05,8.1437 3.9591,14.9997 12.0411,14.9997 16.0001,8.1437 16.0001,7.8567 12.0411,0.999700000000001z" />
+                                                                        <GeometryDrawing Brush="#FFFFFFFF" Geometry="F1M13.7734,8L10.8864,13 5.1134,13 2.2264,8 5.1134,3 10.8864,3z" />
+                                                                        <GeometryDrawing Brush="#FF800080" Geometry="F1M10.8867,13L5.1137,13 2.2267,8 5.1137,3 10.8867,3 13.7737,8z M11.4647,2L4.5347,2 1.0727,8 4.5347,14 11.4647,14 14.9277,8z" />
+                                                                    </DrawingGroup.Children>
                                                                 </DrawingGroup>
                                                             </DrawingBrush.Drawing>
                                                         </DrawingBrush>
@@ -1732,16 +1734,18 @@
                                     </Button>
                                     <Button x:Name="StorageDeactivedSlotBtn" Margin="10" FontSize="20" Click="StorageDeactivedSlotBtn_Click" ToolTip="Ausgewählte Produktplätze deaktivieren" IsEnabled="False">
                                         <StackPanel Orientation="Horizontal">
-                                            <Viewbox xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation">
+                                            <Viewbox>
                                                 <Rectangle Width="20" Height="20">
                                                     <Rectangle.Fill>
                                                         <DrawingBrush>
                                                             <DrawingBrush.Drawing>
                                                                 <DrawingGroup>
-                                                                    <GeometryDrawing Brush="#00FFFFFF" Geometry="F1M16,16L0,16 0,0 16,0z" />
-                                                                    <GeometryDrawing Brush="#FFF6F6F6" Geometry="F1M16,8C16,12.418 12.418,16 8,16 3.582,16 0,12.418 0,8 0,3.582 3.582,0 8,0 12.418,0 16,3.582 16,8" />
-                                                                    <GeometryDrawing Brush="#FFE41400" Geometry="F1M12.4141,11L11.0001,12.414 8.0001,9.414 5.0001,12.414 3.5871,11 6.5861,8 3.5871,5 5.0001,3.586 8.0001,6.586 11.0001,3.586 12.4141,5 9.4141,8z M8.0001,1C4.1351,1 1.0001,4.135 1.0001,8 1.0001,11.865 4.1351,15 8.0001,15 11.8651,15 15.0001,11.865 15.0001,8 15.0001,4.135 11.8651,1 8.0001,1" />
-                                                                    <GeometryDrawing Brush="#FFFFFFFF" Geometry="F1M9.4141,8L12.4141,11 11.0001,12.414 8.0001,9.414 5.0001,12.414 3.5861,11 6.5861,8 3.5861,5 5.0001,3.586 8.0001,6.586 11.0001,3.586 12.4141,5z" />
+                                                                    <DrawingGroup.Children>
+                                                                        <GeometryDrawing Brush="#00FFFFFF" Geometry="F1M16,16L0,16 0,0 16,0z" />
+                                                                        <GeometryDrawing Brush="#FFF6F6F6" Geometry="F1M3.9591,0.999700000000001L9.99999999997669E-05,7.8567 9.99999999997669E-05,8.1437 3.9591,14.9997 12.0411,14.9997 16.0001,8.1437 16.0001,7.8567 12.0411,0.999700000000001z" />
+                                                                        <GeometryDrawing Brush="#FF838383" Geometry="F1M10.8867,13L8.7237,13 12.6157,5.994 13.7737,8z M5.1137,13L4.4047,11.773 9.2797,3 10.8867,3 11.5947,4.227 6.7207,13z M2.2267,8L5.1137,3 7.2767,3 3.3847,10.006z M11.4647,2L4.5347,2 1.0727,8 4.5347,14 11.4647,14 14.9277,8z" />
+                                                                        <GeometryDrawing Brush="#FFFFFFFF" Geometry="F1M10.8867,3L9.2797,3 4.4047,11.773 5.1137,13 6.7207,13 11.5947,4.227z M5.1137,3L2.2267,8 3.3847,10.006 7.2767,3z M13.7737,8L10.8867,13 8.7237,13 12.6157,5.994z" />
+                                                                    </DrawingGroup.Children>
                                                                 </DrawingGroup>
                                                             </DrawingBrush.Drawing>
                                                         </DrawingBrush>

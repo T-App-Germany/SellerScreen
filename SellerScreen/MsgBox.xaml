@@ -21,7 +21,7 @@
         <WindowChrome CaptionHeight="{Binding Height, ElementName=TopBar}" ResizeBorderThickness="{x:Static SystemParameters.WindowResizeBorderThickness}"/>
     </WindowChrome.WindowChrome>
     <Border Style="{StaticResource WindowMainPanelStyle}" BorderBrush="Black">
-        <Grid Background="{Binding Background, ElementName=SideBarsColor}">
+        <Grid x:Name="ContentGrid" Background="{Binding Background, ElementName=SideBarsColor}">
             <Grid x:Name="BindingElements" Visibility="Collapsed">
                 <Grid x:Name="TextFontColor" Background="White"/>
                 <Grid x:Name="SideBarsColor" Background="#48484A"/>

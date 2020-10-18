@@ -86,7 +86,7 @@ namespace SellerScreen
         #endregion
 
         #region Variablen
-        private enum WindowsTheme
+        private enum AppTheme
         {
             Light,
             Dark
@@ -95,6 +95,7 @@ namespace SellerScreen
         private DispatcherTimer MessageTimer { get; set; } = new DispatcherTimer();
         private DispatcherTimer StaticsDaySelectionTimer { get; set; } = new DispatcherTimer();
         private DispatcherTimer SideObjectsAniTimer { get; set; } = new DispatcherTimer();
+        private BackgroundWorker StorageLoader { get; set; } = new BackgroundWorker();
         public object RegistryKeyPath { get; private set; }
 
         private readonly LogWindow logWindow = new LogWindow();
@@ -107,12 +108,12 @@ namespace SellerScreen
         private bool[] displayLogTypes = new bool[5];
         private bool AppInstallationMode = false;
         private string AppThemeStr = "System";
+        private AppTheme Theme;
         private bool AppThemeChanged = false;
         private readonly Random rnd = new Random();
         private short SideObjectsCount = -1;
         private short WindowPage = 0;
 
-        private short StorageSlots = 0;
         private readonly short StorageLimitedNumber = 10;
         private bool[] StorageSlotStatus = Array.Empty<bool>();
         private short[] StorageSlotNumber = Array.Empty<short>();
@@ -120,6 +121,7 @@ namespace SellerScreen
         private string[] StorageSlotName = Array.Empty<string>();
         private short StorageSelectedCount = 0;
         private bool[] StorageSelectedArray = Array.Empty<bool>();
+        private short[] InStorageSlots = Array.Empty<short>();
 
         private short selectedItemsInt = 0;
         private short[] ShopSlotSelectedNumber = Array.Empty<short>();
@@ -181,8 +183,14 @@ namespace SellerScreen
             SideObjectsAniTimer.Tick += new EventHandler(AniTimer_Tick);
             SideObjectsAniTimer.Interval = new TimeSpan(0, 0, 0, 2);
 
+            StorageLoader.DoWork += new DoWorkEventHandler(StorageLoaderRun);
+            StorageLoader.RunWorkerCompleted += new RunWorkerCompletedEventHandler(StorageLoadComplete);
+            StorageLoader.ProgressChanged += new ProgressChangedEventHandler(StorageLoaderProgress);
+
             Directory.CreateDirectory(Path.GetDirectoryName(pathN.settingsFile));
-            Directory.CreateDirectory(Path.GetDirectoryName(pathN.staticsFile));
+            Directory.CreateDirectory(Path.GetDirectoryName(pathN.productsFile));
+            Directory.CreateDirectory(Path.GetDirectoryName(pathN.staticsTotalFile));
+            Directory.CreateDirectory(Path.GetDirectoryName(pathN.staticsDayFile));
             Directory.CreateDirectory(Path.GetDirectoryName(pathN.logFile));
             Directory.CreateDirectory(Path.GetDirectoryName(pathN.graphicsFile));
 
@@ -202,7 +210,7 @@ namespace SellerScreen
                 Reload();
             }
 
-            PageChange(2);
+            PageChange(8);
             SetAppTheme();
             CloseShop();
             RefreshMaximizeRestoreButton();
@@ -373,10 +381,7 @@ namespace SellerScreen
                         UnregisterName($"cloud{i}");
                     }
                 }
-                catch (Exception)
-                {
-
-                }
+                catch{ }
 
                 SideObjectsCount = -1;                
             }
@@ -649,11 +654,10 @@ namespace SellerScreen
         {
             MainProgBarShow();
             LoadSettings();
-            LoadStorage();
+            StorageLoader.RunWorkerAsync();
             LoadTotalStatics();
             LoadDayStatics(DateTime.Now.Date);
             BuildSettings();
-            BuildStorage(themeData.GetWindowsAppTheme().ToString());
             BuildShop(themeData.GetWindowsAppTheme().ToString(), "storage");
             BuildTotalStatics();
             BuildDayStatics();
@@ -664,7 +668,6 @@ namespace SellerScreen
         {
             DoubleAnimation ani = new DoubleAnimation
             {
-                From = 0,
                 To = 5,
                 Duration = TimeSpan.FromSeconds(1),
                 EasingFunction = new QuarticEase()
@@ -677,7 +680,6 @@ namespace SellerScreen
         {
             DoubleAnimation ani = new DoubleAnimation
             {
-                From = 5,
                 To = 0,
                 Duration = TimeSpan.FromSeconds(1),
                 EasingFunction = new QuarticEase()
@@ -710,8 +712,9 @@ namespace SellerScreen
             PageBackgroudColor.Background = themeData.GetLightTheme("PageBackgroudColor");
             SeperatorColor.Background = themeData.GetLightTheme("SeperatorColor");
             ChromeBtnColor.Background = themeData.GetLightTheme("ChromeBtnColor");
+            Theme = AppTheme.Light;
 
-            BuildStorage(AppThemeStr);
+            StorageBuilder();
             BuildShop(AppThemeStr, "storage");
         }
 
@@ -723,8 +726,9 @@ namespace SellerScreen
             PageBackgroudColor.Background = themeData.GetDarkTheme("PageBackgroudColor");
             SeperatorColor.Background = themeData.GetDarkTheme("SeperatorColor");
             ChromeBtnColor.Background = themeData.GetDarkTheme("ChromeBtnColor");
+            Theme = AppTheme.Dark;
 
-            BuildStorage(AppThemeStr);
+            StorageBuilder();
             BuildShop(AppThemeStr, "storage");
         }
 
@@ -958,8 +962,8 @@ namespace SellerScreen
 
             if (from == "storage")
             {
-                length = StorageSlots;
-                Array.Resize(ref ShopSlotSelectedNumber, StorageSlots + 1);
+                length = InStorageSlots.Length;
+                Array.Resize(ref ShopSlotSelectedNumber, InStorageSlots.Length);
             }
             else
             {
@@ -1004,7 +1008,7 @@ namespace SellerScreen
                             break;
                     }
 
-                    Array.Resize(ref ShopSlotSelectedNumber, StorageSlots + 1);
+                    Array.Resize(ref ShopSlotSelectedNumber, InStorageSlots.Length);
 
                     if (status == true)
                     {
@@ -1648,7 +1652,7 @@ namespace SellerScreen
         {
             CloseShop();
 
-            for (int i = 0; i < StorageSlots; i++)
+            for (int i = 0; i < InStorageSlots.Length; i++)
             {
                 selectedItemsInt += ShopSlotSelectedNumber[i];
             }
@@ -1672,7 +1676,7 @@ namespace SellerScreen
                         StaticsTotalCustomers++;
                         StaticsTotalGottenCash += ShopMainPrice;
 
-                        for (int n = 0; n < StorageSlots; n++)
+                        for (int n = 0; n < InStorageSlots.Length; n++)
                         {
                             if (ShopSlotSelectedNumber[n] != 0)
                             {
@@ -1749,7 +1753,7 @@ namespace SellerScreen
                     }
                     else if (ShopTask == "cancel")
                     {
-                        LoadStorage();
+                        StorageLoader.RunWorkerAsync();
                         StaticsTotalGottenCash -= ShopMainPrice;
 
                         for (int n = 0; n < StaticsDaySoldSlotName.Length; n++)
@@ -1795,7 +1799,7 @@ namespace SellerScreen
                     }
                     else if (ShopTask == "complain")
                     {
-                        LoadStorage();
+                        StorageLoader.RunWorkerAsync();
 
                         for (int n = 0; n < StaticsDaySoldSlotName.Length; n++)
                         {
@@ -1877,119 +1881,79 @@ namespace SellerScreen
         #endregion
 
         #region Storage
-        private void StorageSlotEditVBox_MouseDown(object sender, MouseButtonEventArgs e)
+        private short GetNewProductId()
         {
-            Viewbox vBox = sender as Viewbox;
-            short tag = short.Parse(vBox.Tag.ToString());
-
-            EditStorageSlot window = new EditStorageSlot("edit", tag)
+            short i = -1;
+            bool found = true;
+            do
             {
-                slotName = StorageSlotName[tag],
-                slotNumber = StorageSlotNumber[tag],
-                slotStatus = StorageSlotStatus[tag],
-                slotPrice = StorageSlotPrice[tag]
-            };
-            window.ShowDialog();
-
-            if (window.DialogResult == true)
-            {
-                StorageSlotName[tag] = window.slotName;
-                StorageSlotNumber[tag] = window.slotNumber;
-                StorageSlotStatus[tag] = window.slotStatus;
-                StorageSlotPrice[tag] = window.slotPrice;
-
-                if (StorageSlotNumber[tag] < 0)
+                i++;
+                if (!File.Exists(pathN.productsFile + $"{i}.xml"))
                 {
-                    StorageSlotNumber[tag] = 0;
+                    found = false;
                 }
+            } while (found);
+            return i;
+        }
 
-                SaveStorage();
-                Reload();
+        private void StorageUncheckAll()
+        {
+            StorageSelectAllSlotsChBox.IsChecked = false;
+            StorageSelectedCount = 0;
+            StorageRemoveSlotBtn.IsEnabled = false;
+            StorageActivedSlotBtn.IsEnabled = false;
+            StorageDeactivedSlotBtn.IsEnabled = false;
+
+            for (int i = 0; i < StorageSelectedArray.Length; i++)
+            {
+                StorageSelectedArray[i] = false;
             }
         }
 
-        private void StorageSlotCheckBox_Unchecked(object sender, RoutedEventArgs e)
+        private void StorageDeleteSpaces()
         {
-            if (sender is CheckBox chBox)
+            int lenght = (short)InStorageSlots.Length;
+            for (int i = 0; i < lenght; i++)
             {
-                if (StorageSelectedCount == StorageSlots)
+                if (StorageSlotName[i] == null)
                 {
-                    StorageSelectAllSlotsChBox.IsChecked = false;
-                }
-
-                StorageSelectedCount--;
-
-                if (StorageSelectedCount <= 0)
-                {
-                    StorageRemoveSlotBtn.IsEnabled = false;
-                    StorageActivedSlotBtn.IsEnabled = false;
-                    StorageDeactivedSlotBtn.IsEnabled = false;
-                }
-
-                StorageSelectedArray[int.Parse(chBox.Tag.ToString())] = false;
-                StorageSelectAllSlotsChBox.IsChecked = false;
-            }
-        }
-
-        private void StorageSlotCheckBox_Checked(object sender, RoutedEventArgs e)
-        {
-            if (sender is CheckBox chBox)
-            {
-                StorageSelectedCount++;
-
-                StorageRemoveSlotBtn.IsEnabled = true;
-                StorageActivedSlotBtn.IsEnabled = true;
-                StorageDeactivedSlotBtn.IsEnabled = true;
-
-                StorageSelectedArray[int.Parse(chBox.Tag.ToString())] = true;
-
-                if (StorageSelectedCount == StorageSlots)
-                {
-                    StorageSelectAllSlotsChBox.IsChecked = true;
-                }
-            }
-        }
-
-        private void StorageSelectAllSlotsChBox_Click(object sender, RoutedEventArgs e)
-        {
-            if (StorageSelectAllSlotsChBox.IsChecked == true)
-            {
-                StorageRemoveSlotBtn.IsEnabled = true;
-                StorageActivedSlotBtn.IsEnabled = true;
-                StorageDeactivedSlotBtn.IsEnabled = true;
-                StorageSelectedCount = StorageSlots;
-
-                for (int i = 0; i < StorageSlots; i++)
-                {
-                    StorageSelectedArray[i] = true;
-                    CheckBox chBox = (CheckBox)FindName($"StorageSlot{i}ChBox");
-                    if (chBox != null)
+                    for (int n = i; n < lenght; n++)
                     {
-                        chBox.IsChecked = true;
+                        try
+                        {
+                            StorageSlotName[n] = StorageSlotName[n + 1];
+                            StorageSlotStatus[n] = StorageSlotStatus[n + 1];
+                            StorageSlotNumber[n] = StorageSlotNumber[n + 1];
+                            StorageSlotPrice[n] = StorageSlotPrice[n + 1];
+                            InStorageSlots[n] = InStorageSlots[n + 1];
+                        }
+                        catch { }
                     }
+                    lenght--;
+                    i--;
                 }
             }
-            else
-            {
-                StorageRemoveSlotBtn.IsEnabled = false;
-                StorageActivedSlotBtn.IsEnabled = false;
-                StorageDeactivedSlotBtn.IsEnabled = false;
-                StorageUncheckAll();
 
-                for (int i = 0; i < StorageSlots; i++)
-                {
-                    CheckBox chBox = (CheckBox)FindName($"StorageSlot{i}ChBox");
-                    if (chBox != null)
-                    {
-                        chBox.IsChecked = false;
-                    }
-                }
-            }
+            Array.Resize(ref StorageSlotName, lenght);
+            Array.Resize(ref StorageSlotStatus, lenght);
+            Array.Resize(ref StorageSlotNumber, lenght);
+            Array.Resize(ref StorageSlotPrice, lenght);
+            Array.Resize(ref InStorageSlots, lenght);
         }
 
-        private void BuildStorage(string theme)
+        private bool IsStorageSlotError(int i)
         {
-            if (StorageSlots == 0)
+            bool error = false;
+            if (string.IsNullOrWhiteSpace(StorageSlotName[i]) || StorageSlotNumber[i] == 0 || StorageSlotPrice[i] == 0)
+            {
+                error = true;
+            }
+            return error;
+        }
+
+        private void StorageBuilder()
+        {
+            if (InStorageSlots.Length == 0)
             {
                 StorageNoProductsFoundLbl.Visibility = Visibility.Visible;
                 StorageProductsGrid.Visibility = Visibility.Collapsed;
@@ -1998,7 +1962,6 @@ namespace SellerScreen
             {
                 StorageNoProductsFoundLbl.Visibility = Visibility.Collapsed;
                 StorageProductsGrid.Visibility = Visibility.Visible;
-
                 try
                 {
                     StorageSlotsPanel.Children.Clear();
@@ -2006,7 +1969,7 @@ namespace SellerScreen
                     StringReader stringReader;
                     XmlReader xmlReader;
 
-                    for (short i = 0; i < StorageSlots; i++)
+                    for (short i = 0; i < InStorageSlots.Length; i++)
                     {
                         CheckBox chBox = new CheckBox()
                         {
@@ -2143,7 +2106,7 @@ namespace SellerScreen
                         }
                         else
                         {
-                            if (theme == "Light")
+                            if (Theme == AppTheme.Light)
                                 slotScp.Background = Brushes.LightGray;
                             else
                                 slotScp.Background = (Brush)new BrushConverter().ConvertFrom("#FF555555");
@@ -2159,7 +2122,6 @@ namespace SellerScreen
                         slotScp.Children.Add(priceLbl);
                         slotScp.Children.Add(optionsVBox);
                         StorageSlotsPanel.Children.Add(slotScp);
-                        StorageSlotsPanel.UpdateLayout();
 
                         try
                         {
@@ -2211,7 +2173,7 @@ namespace SellerScreen
                         RegisterName(optionsVBox.Name, optionsVBox);
                         RegisterName(slotScp.Name, slotScp);
 
-                        Array.Resize(ref StorageSelectedArray, StorageSlots);
+                        Array.Resize(ref StorageSelectedArray, InStorageSlots.Length);
                         StorageUncheckAll();
                     }
                     logWindow.NewLog($"Building Storage successful", 1);
@@ -2219,12 +2181,11 @@ namespace SellerScreen
                 catch (Exception ex)
                 {
                     logWindow.NewLog($"Building Storage failed! {ex.Message}", 2);
-
                 }
             }
         }
 
-        private void LoadStorage()
+        private void StorageLoaderRun(object sender, DoWorkEventArgs e)
         {
             try
             {
@@ -2237,143 +2198,137 @@ namespace SellerScreen
 
                 try
                 {
-                    StorageSlots = stoL.StorageSlots;
+                    InStorageSlots = stoL.InStorageSlots;
 
-                    for (int i = 0; i < StorageSlots; i++)
+                    foreach (short i in InStorageSlots)
                     {
+                        ProductsData proL = ProductsData.Load(i);
+
                         try
                         {
                             Array.Resize(ref StorageSlotName, StorageSlotName.Length + 1);
-                            StorageSlotName[StorageSlotName.Length - 1] = stoL.StorageSlotName[i];
+                            StorageSlotName[StorageSlotName.Length - 1] = proL.ProductName;
                         }
                         catch (Exception ex)
                         {
-                            logWindow.NewLog($"Error in Loading Storage/StorageSlotName{i} -> {ex.Message}", 2);
 
                         }
+
                         try
                         {
                             Array.Resize(ref StorageSlotNumber, StorageSlotNumber.Length + 1);
-                            StorageSlotNumber[StorageSlotNumber.Length - 1] = stoL.StorageSlotNumber[i];
+                            StorageSlotNumber[StorageSlotNumber.Length - 1] = proL.ProductNumber;
                         }
                         catch (Exception ex)
                         {
-                            logWindow.NewLog($"Error in Loading Storage/StorageSlotNumber{i} -> {ex.Message}", 2);
 
                         }
+
                         try
                         {
                             Array.Resize(ref StorageSlotPrice, StorageSlotPrice.Length + 1);
-                            StorageSlotPrice[StorageSlotPrice.Length - 1] = stoL.StorageSlotPrice[i];
+                            StorageSlotPrice[StorageSlotPrice.Length - 1] = proL.ProductPrice;
                         }
                         catch (Exception ex)
                         {
-                            logWindow.NewLog($"Error in Loading Storage/StorageSlotPrice{i} -> {ex.Message}", 2);
 
                         }
+
                         try
                         {
                             Array.Resize(ref StorageSlotStatus, StorageSlotStatus.Length + 1);
-                            StorageSlotStatus[StorageSlotStatus.Length - 1] = stoL.StorageSlotStatus[i];
+                            StorageSlotStatus[StorageSlotStatus.Length - 1] = proL.ProductStatus;
                         }
                         catch (Exception ex)
                         {
-                            logWindow.NewLog($"Error in Loading Storage/StorageSlotStatus{i} -> {ex.Message}", 2);
 
                         }
+
                     }
                 }
                 catch (Exception ex)
                 {
-                    logWindow.NewLog($"Error in Loading Storage/StorageSlots -> {ex.Message}", 2);
 
                 }
-
-                logWindow.NewLog($"Loading Storage successful", 1);
             }
             catch (Exception ex)
             {
-                logWindow.NewLog($"Loading Storage failed! {ex.Message}", 2);
 
             }
+        }
+
+        private void StorageLoaderProgress(object sender, ProgressChangedEventArgs e)
+        {
+            MainProgBarShow();
+        }
+
+        private void StorageLoadComplete(object sender, RunWorkerCompletedEventArgs e)
+        {
+            MainProgBarHide();
+            StorageBuilder();
         }
 
         private void SaveStorage()
         {
 
             StorageData stoS = new StorageData();
+            ProductsData proS = new ProductsData();
 
-            Array.Clear(stoS.StorageSlotName, 0, stoS.StorageSlotName.Length);
-            Array.Clear(stoS.StorageSlotStatus, 0, stoS.StorageSlotStatus.Length);
-            Array.Clear(stoS.StorageSlotNumber, 0, stoS.StorageSlotNumber.Length);
-            Array.Clear(stoS.StorageSlotPrice, 0, stoS.StorageSlotPrice.Length);
-
-            try
-            {
-                stoS.StorageSlots = StorageSlots;
-            }
-            catch (Exception ex)
-            {
-                logWindow.NewLog($"Error in Saving Storage/StorageSlots -> {ex.Message}", 2);
-
-            }
-
-
-            for (int i = 0; i < StorageSlots; i++)
+            foreach (short i in InStorageSlots)
             {
                 try
                 {
-                    Array.Resize(ref stoS.StorageSlotName, stoS.StorageSlotName.Length + 1);
-                    stoS.StorageSlotName[stoS.StorageSlotName.Length - 1] = StorageSlotName[i];
+                    proS.ProductName = StorageSlotName[i];
                 }
                 catch (Exception ex)
                 {
                     logWindow.NewLog($"Error in Saving Storage/StorageSlotName{i} -> {ex.Message}", 2);
-
                 }
                 try
                 {
-                    Array.Resize(ref stoS.StorageSlotNumber, stoS.StorageSlotNumber.Length + 1);
-                    stoS.StorageSlotNumber[stoS.StorageSlotNumber.Length - 1] = StorageSlotNumber[i];
+                    proS.ProductNumber = StorageSlotNumber[i];
                 }
                 catch (Exception ex)
                 {
                     logWindow.NewLog($"Error in Saving Storage/StorageSlotNumber{i} -> {ex.Message}", 2);
-
                 }
                 try
                 {
-                    Array.Resize(ref stoS.StorageSlotPrice, stoS.StorageSlotPrice.Length + 1);
-                    stoS.StorageSlotPrice[stoS.StorageSlotPrice.Length - 1] = StorageSlotPrice[i];
+                    proS.ProductPrice = StorageSlotPrice[i];
                 }
                 catch (Exception ex)
                 {
                     logWindow.NewLog($"Error in Saving Storage/StorageSlotPrice{i} -> {ex.Message}", 2);
-
                 }
                 try
                 {
-                    Array.Resize(ref stoS.StorageSlotStatus, stoS.StorageSlotStatus.Length + 1);
-                    stoS.StorageSlotStatus[stoS.StorageSlotStatus.Length - 1] = StorageSlotStatus[i];
+                    proS.ProductStatus = StorageSlotStatus[i];
                 }
                 catch (Exception ex)
                 {
                     logWindow.NewLog($"Error in Saving Storage/StorageSlotStatus{i} -> {ex.Message}", 2);
-
+                }
+                try
+                {
+                    proS.Save(i);
+                    logWindow.NewLog($"Saving Product {i} successful", 1);
+                }
+                catch (Exception ex)
+                {
+                    logWindow.NewLog($"Saving Product {i} failed! {ex.Message}", 2);
                 }
             }
 
             try
             {
+                stoS.InStorageSlots = InStorageSlots;
                 stoS.Save();
                 logWindow.NewLog($"Saving Storage successful", 1);
             }
             catch (Exception ex)
             {
                 logWindow.NewLog($"Saving Storage failed! {ex.Message}", 2);
-
             }
-
         }
 
         private void StorageAddSlotBtn_Click(object sender, RoutedEventArgs e)
@@ -2395,14 +2350,16 @@ namespace SellerScreen
                 Array.Resize(ref StorageSlotPrice, StorageSlotPrice.Length + 1);
                 StorageSlotPrice[StorageSlotPrice.Length - 1] = window.slotPrice;
 
-                StorageSlots++;
-                Array.Resize(ref StorageSelectedArray, StorageSlots);
+                Array.Resize(ref InStorageSlots, InStorageSlots.Length + 1);
+                InStorageSlots[InStorageSlots.Length - 1] = GetNewProductId();
+
+                Array.Resize(ref StorageSelectedArray, InStorageSlots.Length);
 
                 StorageUncheckAll();
 
                 SaveStorage();
-                LoadStorage();
-                BuildStorage(themeData.GetWindowsAppTheme().ToString());
+                StorageLoader.RunWorkerAsync();
+                StorageBuilder();
             }
         }
 
@@ -2410,7 +2367,7 @@ namespace SellerScreen
         {
             if (MessageBox.Show("Möchten Sie die ausgewählten Produktplätze wirklich löschen?\nDiese Aktion kann nicht rückgängig gemacht werden!", "Produktplätze löschen", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
             {
-                for (int i = 0; i < StorageSlots; i++)
+                for (int i = 0; i < InStorageSlots.Length; i++)
                 {
                     if (StorageSelectedArray[i] == true)
                     {
@@ -2424,8 +2381,8 @@ namespace SellerScreen
                 StorageUncheckAll();
                 StorageDeleteSpaces();
                 SaveStorage();
-                LoadStorage();
-                BuildStorage(themeData.GetWindowsAppTheme().ToString());
+                StorageLoader.RunWorkerAsync();
+                StorageBuilder();
             }
         }
 
@@ -2433,7 +2390,7 @@ namespace SellerScreen
         {
             if (MessageBox.Show("Möchten Sie die ausgewählten Produktplätze wirklich aktivieren?", "Produktplätze aktivieren", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
             {
-                for (int i = 0; i < StorageSlots; i++)
+                for (int i = 0; i < InStorageSlots.Length; i++)
                 {
                     if (StorageSelectedArray[i] == true)
                     {
@@ -2458,8 +2415,8 @@ namespace SellerScreen
                 StorageUncheckAll();
 
                 SaveStorage();
-                LoadStorage();
-                BuildStorage(themeData.GetWindowsAppTheme().ToString());
+                StorageLoader.RunWorkerAsync();
+                StorageBuilder();
             }
         }
 
@@ -2467,7 +2424,7 @@ namespace SellerScreen
         {
             if (MessageBox.Show("Möchten Sie die ausgewählten Produktplätze wirklich deaktivieren?", "Produktplätze deaktivieren", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
             {
-                for (int i = 0; i < StorageSlots; i++)
+                for (int i = 0; i < InStorageSlots.Length; i++)
                 {
                     if (StorageSelectedArray[i] == true)
                     {
@@ -2477,62 +2434,121 @@ namespace SellerScreen
                 StorageUncheckAll();
 
                 SaveStorage();
-                LoadStorage();
-                BuildStorage(themeData.GetWindowsAppTheme().ToString());
+                StorageLoader.RunWorkerAsync();
+                StorageBuilder();
             }
         }
 
-        private void StorageUncheckAll()
+        private void StorageSlotEditVBox_MouseDown(object sender, MouseButtonEventArgs e)
         {
-            StorageSelectAllSlotsChBox.IsChecked = false;
-            StorageSelectedCount = 0;
-            StorageRemoveSlotBtn.IsEnabled = false;
-            StorageActivedSlotBtn.IsEnabled = false;
-            StorageDeactivedSlotBtn.IsEnabled = false;
+            Viewbox vBox = sender as Viewbox;
+            short tag = short.Parse(vBox.Tag.ToString());
 
-            for (int i = 0; i < StorageSlots; i++)
+            EditStorageSlot window = new EditStorageSlot("edit", tag)
             {
-                StorageSelectedArray[i] = false;
-            }
-        }
+                slotName = StorageSlotName[tag],
+                slotNumber = StorageSlotNumber[tag],
+                slotStatus = StorageSlotStatus[tag],
+                slotPrice = StorageSlotPrice[tag]
+            };
+            window.ShowDialog();
 
-        private void StorageDeleteSpaces()
-        {
-            for (int i = 0; i < StorageSlots; i++)
+            if (window.DialogResult == true)
             {
-                if (StorageSlotName[i] == null)
+                StorageSlotName[tag] = window.slotName;
+                StorageSlotNumber[tag] = window.slotNumber;
+                StorageSlotStatus[tag] = window.slotStatus;
+                StorageSlotPrice[tag] = window.slotPrice;
+
+                if (StorageSlotNumber[tag] < 0)
                 {
-                    for (int n = i; n < StorageSlots; n++)
-                    {
-                        try
-                        {
-                            StorageSlotName[n] = StorageSlotName[n + 1];
-                            StorageSlotStatus[n] = StorageSlotStatus[n + 1];
-                            StorageSlotNumber[n] = StorageSlotNumber[n + 1];
-                            StorageSlotPrice[n] = StorageSlotPrice[n + 1];
-                        }
-                        catch { }
-                    }
-                    StorageSlots--;
-                    i--;
+                    StorageSlotNumber[tag] = 0;
+                }
+
+                SaveStorage();
+                Reload();
+            }
+        }
+
+        private void StorageSlotCheckBox_Unchecked(object sender, RoutedEventArgs e)
+        {
+            if (sender is CheckBox chBox)
+            {
+                if (StorageSelectedCount == InStorageSlots.Length)
+                {
+                    StorageSelectAllSlotsChBox.IsChecked = false;
+                }
+
+                StorageSelectedCount--;
+
+                if (StorageSelectedCount <= 0)
+                {
+                    StorageRemoveSlotBtn.IsEnabled = false;
+                    StorageActivedSlotBtn.IsEnabled = false;
+                    StorageDeactivedSlotBtn.IsEnabled = false;
+                }
+
+                StorageSelectedArray[int.Parse(chBox.Tag.ToString())] = false;
+                StorageSelectAllSlotsChBox.IsChecked = false;
+            }
+        }
+
+        private void StorageSlotCheckBox_Checked(object sender, RoutedEventArgs e)
+        {
+            if (sender is CheckBox chBox)
+            {
+                StorageSelectedCount++;
+
+                StorageRemoveSlotBtn.IsEnabled = true;
+                StorageActivedSlotBtn.IsEnabled = true;
+                StorageDeactivedSlotBtn.IsEnabled = true;
+
+                StorageSelectedArray[int.Parse(chBox.Tag.ToString())] = true;
+
+                if (StorageSelectedCount == InStorageSlots.Length)
+                {
+                    StorageSelectAllSlotsChBox.IsChecked = true;
                 }
             }
-
-            Array.Resize(ref StorageSlotName, StorageSlots);
-            Array.Resize(ref StorageSlotStatus, StorageSlots);
-            Array.Resize(ref StorageSlotNumber, StorageSlots);
-            Array.Resize(ref StorageSlotPrice, StorageSlots);
         }
 
-        private bool IsStorageSlotError(int i)
+        private void StorageSelectAllSlotsChBox_Click(object sender, RoutedEventArgs e)
         {
-            bool error = false;
-            if (string.IsNullOrWhiteSpace(StorageSlotName[i]) || StorageSlotNumber[i] == 0 || StorageSlotPrice[i] == 0)
+            if (StorageSelectAllSlotsChBox.IsChecked == true)
             {
-                error = true;
+                StorageRemoveSlotBtn.IsEnabled = true;
+                StorageActivedSlotBtn.IsEnabled = true;
+                StorageDeactivedSlotBtn.IsEnabled = true;
+                StorageSelectedCount = short.Parse(InStorageSlots.Length.ToString());
+
+                for (int i = 0; i < InStorageSlots.Length; i++)
+                {
+                    StorageSelectedArray[i] = true;
+                    CheckBox chBox = (CheckBox)FindName($"StorageSlot{i}ChBox");
+                    if (chBox != null)
+                    {
+                        chBox.IsChecked = true;
+                    }
+                }
             }
-            return error;
+            else
+            {
+                StorageRemoveSlotBtn.IsEnabled = false;
+                StorageActivedSlotBtn.IsEnabled = false;
+                StorageDeactivedSlotBtn.IsEnabled = false;
+                StorageUncheckAll();
+
+                for (int i = 0; i < InStorageSlots.Length; i++)
+                {
+                    CheckBox chBox = (CheckBox)FindName($"StorageSlot{i}ChBox");
+                    if (chBox != null)
+                    {
+                        chBox.IsChecked = false;
+                    }
+                }
+            }
         }
+
         #endregion
 
         #region PcTime
@@ -2551,114 +2567,6 @@ namespace SellerScreen
         #region Statics
         private void SaveTotalStatics()
         {
-            //for (int i = 0; i < productsNumberList.Length; i++)
-            //{
-            //    if (productsNumberList[i] > mostSoldProductsNumber[0])
-            //    {
-            //        mostSoldProductsNumber[4] = mostSoldProductsNumber[3];
-            //        mostSoldProductsNumber[3] = mostSoldProductsNumber[2];
-            //        mostSoldProductsNumber[2] = mostSoldProductsNumber[1];
-            //        mostSoldProductsNumber[1] = mostSoldProductsNumber[0];
-            //        mostSoldProductsNumber[0] = productsNumberList[i];
-
-            //        mostSoldProductsName[4] = mostSoldProductsName[3];
-            //        mostSoldProductsName[3] = mostSoldProductsName[2];
-            //        mostSoldProductsName[2] = mostSoldProductsName[1];
-            //        mostSoldProductsName[1] = mostSoldProductsName[0];
-            //        mostSoldProductsName[0] = productsNameList[i];
-            //    }
-            //    else if (productsNumberList[i] > mostSoldProductsNumber[1])
-            //    {
-            //        mostSoldProductsNumber[4] = mostSoldProductsNumber[3];
-            //        mostSoldProductsNumber[3] = mostSoldProductsNumber[2];
-            //        mostSoldProductsNumber[2] = mostSoldProductsNumber[1];
-            //        mostSoldProductsNumber[1] = productsNumberList[i];
-
-            //        mostSoldProductsName[4] = mostSoldProductsName[3];
-            //        mostSoldProductsName[3] = mostSoldProductsName[2];
-            //        mostSoldProductsName[2] = mostSoldProductsName[1];
-            //        mostSoldProductsName[1] = productsNameList[i];
-            //    }
-            //    else if (productsNumberList[i] > mostSoldProductsNumber[2])
-            //    {
-            //        mostSoldProductsNumber[4] = mostSoldProductsNumber[3];
-            //        mostSoldProductsNumber[3] = mostSoldProductsNumber[2];
-            //        mostSoldProductsNumber[2] = productsNumberList[i];
-
-            //        mostSoldProductsName[4] = mostSoldProductsName[3];
-            //        mostSoldProductsName[3] = mostSoldProductsName[2];
-            //        mostSoldProductsName[2] = productsNameList[i];
-            //    }
-            //    else if (productsNumberList[i] > mostSoldProductsNumber[3])
-            //    {
-            //        mostSoldProductsNumber[4] = mostSoldProductsNumber[3];
-            //        mostSoldProductsNumber[3] = productsNumberList[i];
-
-            //        mostSoldProductsName[4] = mostSoldProductsName[3];
-            //        mostSoldProductsName[3] = productsNameList[i];
-            //    }
-            //    else if (productsNumberList[i] > mostSoldProductsNumber[4])
-            //    {
-            //        mostSoldProductsNumber[4] = productsNumberList[i];
-
-            //        mostSoldProductsName[4] = productsNameList[i];
-            //    }
-            //}
-
-            //for (int i = 0; i < productsCashList.Length; i++)
-            //{
-            //    if (productsCashList[i] > highestEarningsProductsNumber[0])
-            //    {
-            //        highestEarningsProductsNumber[4] = highestEarningsProductsNumber[3];
-            //        highestEarningsProductsNumber[3] = highestEarningsProductsNumber[2];
-            //        highestEarningsProductsNumber[2] = highestEarningsProductsNumber[1];
-            //        highestEarningsProductsNumber[1] = highestEarningsProductsNumber[0];
-            //        highestEarningsProductsNumber[0] = productsCashList[i];
-
-            //        highestEarningsProductsName[4] = highestEarningsProductsName[3];
-            //        highestEarningsProductsName[3] = highestEarningsProductsName[2];
-            //        highestEarningsProductsName[2] = highestEarningsProductsName[1];
-            //        highestEarningsProductsName[1] = highestEarningsProductsName[0];
-            //        highestEarningsProductsName[0] = productsNameList[i];
-            //    }
-            //    else if (productsCashList[i] > highestEarningsProductsNumber[1])
-            //    {
-            //        highestEarningsProductsNumber[4] = highestEarningsProductsNumber[3];
-            //        highestEarningsProductsNumber[3] = highestEarningsProductsNumber[2];
-            //        highestEarningsProductsNumber[2] = highestEarningsProductsNumber[1];
-            //        highestEarningsProductsNumber[1] = productsNumberList[i];
-
-            //        highestEarningsProductsName[4] = highestEarningsProductsName[3];
-            //        highestEarningsProductsName[3] = highestEarningsProductsName[2];
-            //        highestEarningsProductsName[2] = highestEarningsProductsName[1];
-            //        highestEarningsProductsName[1] = productsNameList[i];
-            //    }
-            //    else if (productsCashList[i] > highestEarningsProductsNumber[2])
-            //    {
-            //        highestEarningsProductsNumber[4] = highestEarningsProductsNumber[3];
-            //        highestEarningsProductsNumber[3] = highestEarningsProductsNumber[2];
-            //        highestEarningsProductsNumber[2] = productsNumberList[i];
-
-            //        highestEarningsProductsName[4] = highestEarningsProductsName[3];
-            //        highestEarningsProductsName[3] = highestEarningsProductsName[2];
-            //        highestEarningsProductsName[2] = productsNameList[i];
-            //    }
-            //    else if (productsCashList[i] > highestEarningsProductsNumber[3])
-            //    {
-            //        highestEarningsProductsNumber[4] = highestEarningsProductsNumber[3];
-            //        highestEarningsProductsNumber[3] = productsNumberList[i];
-
-            //        highestEarningsProductsName[4] = highestEarningsProductsName[3];
-            //        highestEarningsProductsName[3] = productsNameList[i];
-            //    }
-            //    else if (productsCashList[i] > highestEarningsProductsNumber[4])
-            //    {
-            //        highestEarningsProductsNumber[4] = productsNumberList[i];
-
-            //        highestEarningsProductsName[4] = productsNameList[i];
-            //    }
-            //}
-
             StaticsTotalData staTS = new StaticsTotalData
             {
                 StaticsTotalStartDate = StaticsTotalStartDate,
@@ -3382,7 +3290,7 @@ namespace SellerScreen
 
             for (int i = 1; i < 32; i++)
             {
-                if (File.Exists(pathN.staticsFile + $"\\{i}_{month}_{year}.xml"))
+                if (File.Exists(pathN.staticsDayFile + $"\\{i}_{month}_{year}.xml"))
                 {
                     Label lbl = new Label
                     {
@@ -3508,10 +3416,10 @@ namespace SellerScreen
 
         private void SettingsSaveBtn_Click(object sender, RoutedEventArgs e)
         {
-            //MsgBox msgBox = new MsgBox("Möchten Sie die Einstellungen wirklich speichern?", "Einstellungen speichern", MsgBox.MsgButtons.YesNo, MsgBox.MsgIcon.Error);
-            //msgBox.ShowDialog();
+            MsgBox msgBox = new MsgBox("Möchten Sie die Einstellungen wirklich speichern?", "Einstellungen speichern", MsgBox.MsgButtons.YesNo, MsgBox.MsgIcon.Question);
+            msgBox.ShowDialog();
 
-            if (MessageBox.Show("Möchten Sie die Einstellungen wirklich speichern?", "Einstellungen speichern", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
+            if (msgBox.DialogResult == true)
             {
                 displayLogTypes[0] = SettingsLogType0CheckBox.IsOn;
                 displayLogTypes[1] = SettingsLogType1CheckBox.IsOn;

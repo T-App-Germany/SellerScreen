@@ -28,16 +28,7 @@ namespace SellerScreen
                 SlotNameTxtBox.Text = slotName;
                 NumberLbl.Content = slotNumber.ToString();
                 SlotPriceTxtBox.Text = slotPrice.ToString();
-                if (slotStatus == false)
-                {
-                    ActivateBtn.IsChecked = false;
-                    DeactivateBtn.IsChecked = true;
-                }
-                else
-                {
-                    ActivateBtn.IsChecked = true;
-                    DeactivateBtn.IsChecked = false;
-                }
+                StatusSwitch.IsOn = slotStatus;
 
                 Title = $"Produkt bearbeiten: {id + 1}";
             }
@@ -47,8 +38,7 @@ namespace SellerScreen
                 NumberLbl.Content = "0";
                 SlotPriceTxtBox.Text = "0";
                 slotStatus = false;
-                ActivateBtn.IsChecked = false;
-                DeactivateBtn.IsChecked = false;
+                StatusSwitch.IsOn = false;
                 Title = $"Produkt hinzufügen";
             }
 
@@ -60,6 +50,7 @@ namespace SellerScreen
             slotName = SlotNameTxtBox.Text;
             slotNumber += short.Parse(SlotAddNumberTxtBox.Text);
             slotPrice = double.Parse(SlotPriceTxtBox.Text);
+            slotStatus = StatusSwitch.IsOn;
 
             DialogResult = true;
         }
@@ -68,18 +59,6 @@ namespace SellerScreen
         {
             int i = SlotNameTxtBox.Text.Length;
             SlotNameTxtBoxCouterLbl.Content = i + "/32";
-        }
-
-        private void DeactivateBtn_Click(object sender, RoutedEventArgs e)
-        {
-            ActivateBtn.IsChecked = false;
-            slotStatus = false;
-        }
-
-        private void ActivateBtn_Click(object sender, RoutedEventArgs e)
-        {
-            DeactivateBtn.IsChecked = false;
-            slotStatus = true;
         }
 
         private void SetAppTheme()

@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Markup;
@@ -29,6 +30,7 @@ namespace SellerScreen
             TextBlock.Text = text;
             Title = header;
             ButtonPanel.Children.Clear();
+            IconVbox.Visibility = Visibility.Collapsed;
 
             if (buttons == MsgButtons.YesNo)
             {
@@ -39,6 +41,7 @@ namespace SellerScreen
                     Width = 104,
                     IsDefault = true
                 };
+                btn.Click += new RoutedEventHandler(DefaulBtn_Click);
 
                 Button btn2 = new Button
                 {
@@ -98,9 +101,17 @@ namespace SellerScreen
             {
                 xamlString = XamlWriter.Save(OkVbox);
             }
+
             StringReader stringReader = new StringReader(xamlString);
             XmlReader xmlReader = XmlReader.Create(stringReader);
-            InfoVbox = (Viewbox)XamlReader.Load(xmlReader);
+            Viewbox vBox = (Viewbox)XamlReader.Load(xmlReader);
+            ContentGrid.Children.Add(vBox);
+        }
+
+        private void DefaulBtn_Click(object sender, RoutedEventArgs e)
+        {
+            DialogResult = true;
+            Close();
         }
     }
 }

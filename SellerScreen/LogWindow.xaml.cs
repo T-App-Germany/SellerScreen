@@ -25,11 +25,11 @@ namespace SellerScreen
                 try
                 {
                     string[] lines = { textToSave };
-                    File.AppendAllLines(Path.Combine(pathN.logFile, $"pcs-{DateTime.Now.Day}_{DateTime.Now.Month}_{DateTime.Now.Year}-log.txt"), lines);
+                    File.AppendAllLines(Path.Combine(pathN.logFile, $"log-{DateTime.Now.Day}_{DateTime.Now.Month}_{DateTime.Now.Year}.txt"), lines);
                 }
                 catch
                 {
-                    File.WriteAllText(Path.Combine(pathN.logFile, $"pcs-{DateTime.Now.Day}_{DateTime.Now.Month}_{DateTime.Now.Year}-log.txt"), textToSave);
+                    File.WriteAllText(Path.Combine(pathN.logFile, $"log-{DateTime.Now.Day}_{DateTime.Now.Month}_{DateTime.Now.Year}.txt"), textToSave);
                 }
             }
             catch
@@ -54,8 +54,8 @@ namespace SellerScreen
                 {
                     id++;
                     string[] separatingStrings = { " " };
-                    string[] words = textToWrite.Split(separatingStrings, StringSplitOptions.RemoveEmptyEntries);
                     string timeStamp = $" [{DateTime.Now.ToShortDateString()}, {DateTime.Now.ToLongTimeString()}] {id}:";
+                    string[] words = textToWrite.Split(separatingStrings, StringSplitOptions.RemoveEmptyEntries);
                     txtblock.Inlines.Add(timeStamp);
 
                     foreach (var word in words)

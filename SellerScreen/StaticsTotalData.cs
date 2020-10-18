@@ -34,7 +34,7 @@ namespace SellerScreen
         {
             PathName pathN = new PathName();
 
-            using (FileStream stream = new FileStream($"{pathN.settingsFile}TotalStatics.xml", FileMode.Create))
+            using (FileStream stream = new FileStream($"{pathN.staticsTotalFile}TotalStatics.xml", FileMode.Create))
             {
                 XmlSerializer XML = new XmlSerializer(typeof(StaticsTotalData));
                 XML.Serialize(stream, this);
@@ -45,7 +45,7 @@ namespace SellerScreen
         {
             PathName pathN = new PathName();
 
-            using (FileStream stream = new FileStream($"{pathN.settingsFile}TotalStatics.xml", FileMode.Open))
+            using (FileStream stream = new FileStream($"{pathN.staticsTotalFile}TotalStatics.xml", FileMode.Open))
             {
                 XmlSerializer XML = new XmlSerializer(typeof(StaticsTotalData));
                 return (StaticsTotalData)XML.Deserialize(stream);

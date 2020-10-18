@@ -22,7 +22,7 @@ namespace SellerScreen
         {
             PathName pathN = new PathName();
 
-            using (FileStream stream = new FileStream(path: $"{pathN.staticsFile}{DateTime.Now.Day}_{DateTime.Now.Month}_{DateTime.Now.Year}.xml", FileMode.Create))
+            using (FileStream stream = new FileStream(path: $"{pathN.staticsDayFile}{DateTime.Now.Day}_{DateTime.Now.Month}_{DateTime.Now.Year}.xml", FileMode.Create))
             {
                 XmlSerializer XML = new XmlSerializer(typeof(StaticsDayData));
                 XML.Serialize(stream, this);
@@ -37,7 +37,7 @@ namespace SellerScreen
 
             PathName pathN = new PathName();
 
-            using (FileStream stream = new FileStream($"{pathN.staticsFile}{day}_{month}_{year}.xml", FileMode.Open))
+            using (FileStream stream = new FileStream($"{pathN.staticsDayFile}{day}_{month}_{year}.xml", FileMode.Open))
             {
                 XmlSerializer XML = new XmlSerializer(typeof(StaticsDayData));
                 return (StaticsDayData)XML.Deserialize(stream);

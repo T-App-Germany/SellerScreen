@@ -531,6 +531,26 @@
                         </Rectangle.Fill>
                     </Rectangle>
                 </Viewbox>
+                <Viewbox x:Name="MsgInfoVboxTemp" ToolTip="Mehr Informationen">
+                    <Rectangle Width="25" Height="25">
+                        <Rectangle.Fill>
+                            <DrawingBrush>
+                                <DrawingBrush.Drawing>
+                                    <DrawingGroup>
+                                        <DrawingGroup.Children>
+                                            <GeometryDrawing Brush="#00FFFFFF" Geometry="F1M16,16L0,16 0,0 16,0z" />
+                                            <GeometryDrawing Brush="#FFF6F6F6" Geometry="F1M11.5,0C9.186,0,7.302,1.753,7.051,4L1.585,4 0,5.586 0,12.414 1.586,14 2,14 2,16 4.414,16 6.414,14 9.414,14 11,12.414 11,8.952C11.165,8.973 11.329,9 11.5,9 13.985,9 16,6.985 16,4.5 16,2.015 13.985,0 11.5,0" />
+                                            <GeometryDrawing Brush="#FF424242" Geometry="F1M9,12L5.5,12 4,13.5 4,12 2,12 2,6 7.275,6C7.162,5.681,7.089,5.347,7.051,5L1.999,5 1,6 1,12 2,13 3,13 3,15 4,15 6,13 9,13 10,12 10,8.725C9.646,8.599,9.307,8.445,9,8.24z" />
+                                            <GeometryDrawing Brush="#FFEFEFF0" Geometry="F1M2,12L4,12 4,13.5 5.5,12 9,12 9,8.24C8.203,7.707,7.603,6.919,7.275,6L2,6z" />
+                                            <GeometryDrawing Brush="#FF424242" Geometry="F1M12,3L11,3 11,2 12,2z M12,7L11,7 11,4 12,4z M11.5,1C9.567,1 8,2.567 8,4.5 8,6.433 9.567,8 11.5,8 13.433,8 15,6.433 15,4.5 15,2.567 13.433,1 11.5,1" />
+                                            <GeometryDrawing Brush="#FFEFEFF0" Geometry="F1M11,3L12,3 12,1.999 11,1.999z M11,7L12,7 12,4 11,4z" />
+                                        </DrawingGroup.Children>
+                                    </DrawingGroup>
+                                </DrawingBrush.Drawing>
+                            </DrawingBrush>
+                        </Rectangle.Fill>
+                    </Rectangle>
+                </Viewbox>
             </Grid>
             <Grid x:Name="AppContentGrid">
                 <Grid.Effect>
@@ -1207,7 +1227,7 @@
                             </ScrollViewer>
                         </Grid>
                     </Grid>
-                    <Grid x:Name="Page6Grid" Visibility="Collapsed">
+                    <Grid x:Name="Page6Grid" Visibility="Visible">
                         <TextBlock HorizontalAlignment="Left" Margin="10" Text="Statistiken" VerticalAlignment="Top" TextTrimming="CharacterEllipsis" FontSize="25"/>
                         <Grid x:Name="Page6ContentGrid" Margin="0,53,0,0">
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Top" HorizontalAlignment="Left" Margin="10">
@@ -1662,7 +1682,7 @@
                         </Grid>
                     </Grid>
                     <Grid x:Name="Page7Grid" Visibility="Collapsed"/>
-                    <Grid x:Name="Page8Grid" Visibility="Visible">
+                    <Grid x:Name="Page8Grid" Visibility="Collapsed">
                         <TextBlock HorizontalAlignment="Left" Margin="10" Text="Lager" VerticalAlignment="Top" TextTrimming="CharacterEllipsis" FontSize="25"/>
                         <StackPanel x:Name="Page8ContentGrid" Margin="0,50,0,0">
                             <GroupBox Header="Werkzeuge" Margin="10" FontSize="15">
@@ -1821,6 +1841,104 @@
                     </Grid>
                     <Grid x:Name="Page9Grid" Visibility="Collapsed"/>
                     <ProgressBar x:Name="MainProgBar" VerticalAlignment="Top" Margin="0" IsIndeterminate="True" Foreground="Red" Value="1" Visibility="Visible" BorderThickness="0" Height="5"/>
+                    <ScrollViewer HorizontalAlignment="Right" VerticalAlignment="Top" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                        <StackPanel x:Name="MsgPanel">
+                            <Border Width="300" Height="120" BorderThickness="2" BorderBrush="Red" CornerRadius="5" Margin="10">
+                                <Grid>
+                                    <Border Background="Red" Opacity="0.7"/>
+                                    <TextBlock Text="Lager" FontSize="20" Padding="5" TextTrimming="CharacterEllipsis" VerticalAlignment="Top" Margin="0,0,30,0"/>
+                                    <Button Width="25" Height="25" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="5">
+                                        <Viewbox>
+                                            <Rectangle Width="25" Height="25">
+                                                <Rectangle.Fill>
+                                                    <DrawingBrush>
+                                                        <DrawingBrush.Drawing>
+                                                            <DrawingGroup>
+                                                                <DrawingGroup.Children>
+                                                                    <GeometryDrawing Brush="#00FFFFFF" Geometry="F1M16,16L0,16 0,0 16,0z" />
+                                                                    <GeometryDrawing Brush="#FFF6F6F6" Geometry="F1M11.5,0C9.186,0,7.302,1.753,7.051,4L1.585,4 0,5.586 0,12.414 1.586,14 2,14 2,16 4.414,16 6.414,14 9.414,14 11,12.414 11,8.952C11.165,8.973 11.329,9 11.5,9 13.985,9 16,6.985 16,4.5 16,2.015 13.985,0 11.5,0" />
+                                                                    <GeometryDrawing Brush="#FF424242" Geometry="F1M9,12L5.5,12 4,13.5 4,12 2,12 2,6 7.275,6C7.162,5.681,7.089,5.347,7.051,5L1.999,5 1,6 1,12 2,13 3,13 3,15 4,15 6,13 9,13 10,12 10,8.725C9.646,8.599,9.307,8.445,9,8.24z" />
+                                                                    <GeometryDrawing Brush="#FFEFEFF0" Geometry="F1M2,12L4,12 4,13.5 5.5,12 9,12 9,8.24C8.203,7.707,7.603,6.919,7.275,6L2,6z" />
+                                                                    <GeometryDrawing Brush="#FF424242" Geometry="F1M12,3L11,3 11,2 12,2z M12,7L11,7 11,4 12,4z M11.5,1C9.567,1 8,2.567 8,4.5 8,6.433 9.567,8 11.5,8 13.433,8 15,6.433 15,4.5 15,2.567 13.433,1 11.5,1" />
+                                                                    <GeometryDrawing Brush="#FFEFEFF0" Geometry="F1M11,3L12,3 12,1.999 11,1.999z M11,7L12,7 12,4 11,4z" />
+                                                                </DrawingGroup.Children>
+                                                            </DrawingGroup>
+                                                        </DrawingBrush.Drawing>
+                                                    </DrawingBrush>
+                                                </Rectangle.Fill>
+                                            </Rectangle>
+                                        </Viewbox>
+                                    </Button>
+                                    <TextBlock FontSize="15" Padding="5" TextTrimming="CharacterEllipsis" TextWrapping="WrapWithOverflow" Margin="0,35,0,2">
+                                        Produkt 0 konnte nicht geladen werden.<LineBreak/><Run Text="Der Index war außerhalb des Arraybereichs." FontStyle="Italic"/>
+                                    </TextBlock>
+                                    <Grid Background="White" VerticalAlignment="Bottom" Height="2" Margin="2,0,2,0" HorizontalAlignment="Left" Width="292"/>
+                                </Grid>
+                            </Border>
+                            <Border Width="300" Height="120" BorderThickness="2" BorderBrush="Orange" CornerRadius="5" Margin="10">
+                                <Grid>
+                                    <Border Background="Orange" Opacity="0.7"/>
+                                    <TextBlock Text="Lager" FontSize="20" Padding="5" TextTrimming="CharacterEllipsis" VerticalAlignment="Top"/>
+                                    <Button Width="25" Height="25" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="10">
+                                        <Viewbox>
+                                            <Rectangle Width="25" Height="25">
+                                                <Rectangle.Fill>
+                                                    <DrawingBrush>
+                                                        <DrawingBrush.Drawing>
+                                                            <DrawingGroup>
+                                                                <DrawingGroup.Children>
+                                                                    <GeometryDrawing Brush="#00FFFFFF" Geometry="F1M16,16L0,16 0,0 16,0z" />
+                                                                    <GeometryDrawing Brush="#FFF6F6F6" Geometry="F1M11.5,0C9.186,0,7.302,1.753,7.051,4L1.585,4 0,5.586 0,12.414 1.586,14 2,14 2,16 4.414,16 6.414,14 9.414,14 11,12.414 11,8.952C11.165,8.973 11.329,9 11.5,9 13.985,9 16,6.985 16,4.5 16,2.015 13.985,0 11.5,0" />
+                                                                    <GeometryDrawing Brush="#FF424242" Geometry="F1M9,12L5.5,12 4,13.5 4,12 2,12 2,6 7.275,6C7.162,5.681,7.089,5.347,7.051,5L1.999,5 1,6 1,12 2,13 3,13 3,15 4,15 6,13 9,13 10,12 10,8.725C9.646,8.599,9.307,8.445,9,8.24z" />
+                                                                    <GeometryDrawing Brush="#FFEFEFF0" Geometry="F1M2,12L4,12 4,13.5 5.5,12 9,12 9,8.24C8.203,7.707,7.603,6.919,7.275,6L2,6z" />
+                                                                    <GeometryDrawing Brush="#FF424242" Geometry="F1M12,3L11,3 11,2 12,2z M12,7L11,7 11,4 12,4z M11.5,1C9.567,1 8,2.567 8,4.5 8,6.433 9.567,8 11.5,8 13.433,8 15,6.433 15,4.5 15,2.567 13.433,1 11.5,1" />
+                                                                    <GeometryDrawing Brush="#FFEFEFF0" Geometry="F1M11,3L12,3 12,1.999 11,1.999z M11,7L12,7 12,4 11,4z" />
+                                                                </DrawingGroup.Children>
+                                                            </DrawingGroup>
+                                                        </DrawingBrush.Drawing>
+                                                    </DrawingBrush>
+                                                </Rectangle.Fill>
+                                            </Rectangle>
+                                        </Viewbox>
+                                    </Button>
+                                    <TextBlock FontSize="15" Padding="5" TextTrimming="CharacterEllipsis" TextWrapping="WrapWithOverflow" Margin="0,35,0,0">
+                                        Das bearbeitete Produkt 0 enthält Fehler. Es kann nicht Verkauft werden.
+                                    </TextBlock>
+                                </Grid>
+                            </Border>
+                            <Border Width="300" Height="120" BorderThickness="2" BorderBrush="Green" CornerRadius="5" Margin="10">
+                                <Grid>
+                                    <Border Background="Green" Opacity="0.7"/>
+                                    <TextBlock Text="Lager" FontSize="20" Padding="5" TextTrimming="CharacterEllipsis" VerticalAlignment="Top"/>
+                                    <Button Width="25" Height="25" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="10">
+                                        <Viewbox>
+                                            <Rectangle Width="25" Height="25">
+                                                <Rectangle.Fill>
+                                                    <DrawingBrush>
+                                                        <DrawingBrush.Drawing>
+                                                            <DrawingGroup>
+                                                                <DrawingGroup.Children>
+                                                                    <GeometryDrawing Brush="#00FFFFFF" Geometry="F1M16,16L0,16 0,0 16,0z" />
+                                                                    <GeometryDrawing Brush="#FFF6F6F6" Geometry="F1M11.5,0C9.186,0,7.302,1.753,7.051,4L1.585,4 0,5.586 0,12.414 1.586,14 2,14 2,16 4.414,16 6.414,14 9.414,14 11,12.414 11,8.952C11.165,8.973 11.329,9 11.5,9 13.985,9 16,6.985 16,4.5 16,2.015 13.985,0 11.5,0" />
+                                                                    <GeometryDrawing Brush="#FF424242" Geometry="F1M9,12L5.5,12 4,13.5 4,12 2,12 2,6 7.275,6C7.162,5.681,7.089,5.347,7.051,5L1.999,5 1,6 1,12 2,13 3,13 3,15 4,15 6,13 9,13 10,12 10,8.725C9.646,8.599,9.307,8.445,9,8.24z" />
+                                                                    <GeometryDrawing Brush="#FFEFEFF0" Geometry="F1M2,12L4,12 4,13.5 5.5,12 9,12 9,8.24C8.203,7.707,7.603,6.919,7.275,6L2,6z" />
+                                                                    <GeometryDrawing Brush="#FF424242" Geometry="F1M12,3L11,3 11,2 12,2z M12,7L11,7 11,4 12,4z M11.5,1C9.567,1 8,2.567 8,4.5 8,6.433 9.567,8 11.5,8 13.433,8 15,6.433 15,4.5 15,2.567 13.433,1 11.5,1" />
+                                                                    <GeometryDrawing Brush="#FFEFEFF0" Geometry="F1M11,3L12,3 12,1.999 11,1.999z M11,7L12,7 12,4 11,4z" />
+                                                                </DrawingGroup.Children>
+                                                            </DrawingGroup>
+                                                        </DrawingBrush.Drawing>
+                                                    </DrawingBrush>
+                                                </Rectangle.Fill>
+                                            </Rectangle>
+                                        </Viewbox>
+                                    </Button>
+                                    <TextBlock FontSize="15" Padding="5" TextTrimming="CharacterEllipsis" TextWrapping="WrapWithOverflow" Margin="0,35,0,0">
+                                        Das Laden des Lagers war erfolgreich.<LineBreak/>Die Kasse wird aktualisiert.
+                                    </TextBlock>
+                                </Grid>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
                 </Grid>
                 <Grid x:Name="SideBar" HorizontalAlignment="Left" Width="70" Background="{Binding Background, ElementName=SideBarsColor}" RenderTransformOrigin="0.5,0.5" Margin="0,70,0,0">
                     <Grid.Effect>

@@ -9,6 +9,7 @@ using System.Reflection;
 using System.Security.Principal;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Markup;
 using System.Windows.Media;
@@ -91,11 +92,18 @@ namespace SellerScreen
             Light,
             Dark
         }
+        private enum MsgTypes
+        {
+            Error,
+            Warning,
+            Success,
+        }
 
         private DispatcherTimer MessageTimer { get; set; } = new DispatcherTimer();
         private DispatcherTimer StaticsDaySelectionTimer { get; set; } = new DispatcherTimer();
         private DispatcherTimer SideObjectsAniTimer { get; set; } = new DispatcherTimer();
         private BackgroundWorker StorageLoader { get; set; } = new BackgroundWorker();
+        private BackgroundWorker StorageSaver { get; set; } = new BackgroundWorker();
         public object RegistryKeyPath { get; private set; }
 
         private readonly LogWindow logWindow = new LogWindow();
@@ -113,6 +121,8 @@ namespace SellerScreen
         private readonly Random rnd = new Random();
         private short SideObjectsCount = -1;
         private short WindowPage = 0;
+        private int MsgNumber = -1;
+        private short MsgItemTarget = -1;
 
         private readonly short StorageLimitedNumber = 10;
         private bool[] StorageSlotStatus = Array.Empty<bool>();
@@ -160,6 +170,7 @@ namespace SellerScreen
         private short[] productsNumberList = Array.Empty<short>();
         private double[] productsCashList = Array.Empty<double>();
         private double[] productsSinglePriceList = Array.Empty<double>();
+        private Viewbox statusVbox;
 
         //private string[] planedUserNameList = Array.Empty<string>();
         //private int[] plannedUserStartTimeList = Array.Empty<int>();
@@ -187,6 +198,10 @@ namespace SellerScreen
             StorageLoader.RunWorkerCompleted += new RunWorkerCompletedEventHandler(StorageLoadComplete);
             StorageLoader.ProgressChanged += new ProgressChangedEventHandler(StorageLoaderProgress);
 
+            StorageSaver.DoWork += new DoWorkEventHandler(StorageStorageSaverRun);
+            StorageSaver.RunWorkerCompleted += new RunWorkerCompletedEventHandler(StorageSaverComplete);
+            StorageSaver.ProgressChanged += new ProgressChangedEventHandler(StorageSaverProgress);
+
             Directory.CreateDirectory(Path.GetDirectoryName(pathN.settingsFile));
             Directory.CreateDirectory(Path.GetDirectoryName(pathN.productsFile));
             Directory.CreateDirectory(Path.GetDirectoryName(pathN.staticsTotalFile));
@@ -198,6 +213,7 @@ namespace SellerScreen
             displayLogTypes[2] = true;
             displayLogTypes[4] = true;
             logWindow.displayLogTypes = displayLogTypes;
+            MsgPanel.Children.Clear();
 
             if (!File.Exists($"{pathN.settingsFile}Settings.xml") && !File.Exists($"{pathN.settingsFile}Storage.xml") && !File.Exists($"{pathN.settingsFile}TotalStatics.xml"))
             {
@@ -757,6 +773,176 @@ namespace SellerScreen
                     EasingFunction = new QuadraticEase()
                 };
                 scp.BeginAnimation(MarginProperty, ani);
+            }
+        }
+
+        private void NewMsgItem(MsgTypes type, string headerText, string bodyText, string ex)
+        {
+            MsgNumber++;
+            Border item = new Border
+            {
+                Width = 300,
+                Height = 120,
+                BorderThickness = new Thickness(2),
+                CornerRadius = new CornerRadius(5),
+                Margin = new Thickness(10),
+                Tag = MsgNumber,
+                Name = $"Msg{MsgNumber}Panel"
+            };
+
+            Grid grid = new Grid();
+
+            Border back = new Border
+            {
+                Opacity = 0.7
+            };
+
+            TextBlock HeaderTxt = new TextBlock
+            {
+                Text = headerText,
+                FontSize = 20,
+                Padding = new Thickness(5),
+                TextTrimming = TextTrimming.CharacterEllipsis,
+                VerticalAlignment = VerticalAlignment.Top,
+                Margin = new Thickness(0, 0, 30, 0),
+                Tag = MsgNumber,
+                Name = $"Msg{MsgNumber}HeaderTxt"
+            };
+
+            Button infoBtn = new Button
+            {
+                Width = 25,
+                Height = 25,
+                HorizontalAlignment = HorizontalAlignment.Right,
+                VerticalAlignment = VerticalAlignment.Top,
+                Margin = new Thickness(5),
+                Tag = MsgNumber,
+                Name = $"Msg{MsgNumber}InfoBtn"
+            };
+            infoBtn.Click += new RoutedEventHandler(MsgInfoBtn_Click);
+
+            string xamlString = XamlWriter.Save(MsgInfoVboxTemp);
+            StringReader stringReader = new StringReader(xamlString);
+            XmlReader xmlReader = XmlReader.Create(stringReader);
+            Viewbox infoVbox = (Viewbox)XamlReader.Load(xmlReader);
+
+            TextBlock BodyTxt = new TextBlock
+            {
+                Text = bodyText,
+                FontSize = 15,
+                Padding = new Thickness(5),
+                TextTrimming = TextTrimming.CharacterEllipsis,
+                TextWrapping = TextWrapping.WrapWithOverflow,
+                Margin = new Thickness(0, 35, 0, 0),
+                Tag = MsgNumber,
+                Name = $"Msg{MsgNumber}BodyTxt"
+            };
+
+            Grid bar = new Grid
+            {
+                Background = Brushes.White,
+                VerticalAlignment = VerticalAlignment.Bottom,
+                HorizontalAlignment = HorizontalAlignment.Left,
+                Height = 2,
+                Margin = new Thickness(2,0,2,0),
+                Tag = MsgNumber,
+                Width = 292
+            };
+
+            if (type == MsgTypes.Error)
+            {
+                item.BorderBrush = Brushes.Red;
+                back.Background = Brushes.Red;
+            }
+            else if (type == MsgTypes.Success)
+            {
+                item.BorderBrush = Brushes.Green;
+                back.Background = Brushes.Green;
+            }
+            else if (type == MsgTypes.Warning)
+            {
+                item.BorderBrush = Brushes.Orange;
+                back.Background = Brushes.Orange;
+            }
+
+            if (!string.IsNullOrEmpty(ex))
+            {
+                BodyTxt.Inlines.Add(new Run(ex) { FontStyle = FontStyles.Italic });
+            }
+
+            infoBtn.Content = infoVbox;
+            item.Child = grid;
+            grid.Children.Add(back);
+            grid.Children.Add(HeaderTxt);
+            grid.Children.Add(infoBtn);
+            grid.Children.Add(BodyTxt);
+            grid.Children.Add(bar);
+            MsgPanel.Children.Add(item);
+
+            RegisterName(HeaderTxt.Name, HeaderTxt);
+            RegisterName(BodyTxt.Name, BodyTxt);
+
+            DoubleAnimation ani = new DoubleAnimation
+            {
+                To = 0,
+                Duration = TimeSpan.FromSeconds(5),
+            };
+            ani.Completed += new EventHandler(MsgTimeOut);
+            bar.BeginAnimation(WidthProperty, ani);
+        }
+
+        private void MsgInfoBtn_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button btn)
+            {
+                int i = int.Parse(btn.Tag.ToString());
+                MsgBox msg = new MsgBox($"{i}", "", MsgBox.MsgButtons.OkCancel, MsgBox.MsgIcon.Info);
+                msg.ShowDialog();
+            }
+        }
+
+        private void MsgTimeOut(object sender, EventArgs e)
+        {
+            MsgItemTarget++;
+
+            Border item = (Border)MsgPanel.Children[MsgItemTarget];
+
+            DoubleAnimation ani = new DoubleAnimation
+            {
+                To = 0,
+                Duration = TimeSpan.FromSeconds(1),
+                EasingFunction = new QuadraticEase(),
+            };
+            ani.Completed += new EventHandler(MsgHidden);
+            item.BeginAnimation(OpacityProperty, ani);
+        }
+
+        private void MsgHidden(object sender, EventArgs e)
+        {
+            MsgItemTarget--;
+            try
+            {
+                Border item = (Border)MsgPanel.Children[MsgItemTarget + 1];
+
+                DoubleAnimation ani = new DoubleAnimation
+                {
+                    To = 0,
+                    Duration = TimeSpan.FromSeconds(1),
+                    EasingFunction = new QuadraticEase(),
+                };
+                item.BeginAnimation(HeightProperty, ani);
+
+                ThicknessAnimation ani2 = new ThicknessAnimation
+                {
+                    To = new Thickness(0),
+                    Duration = TimeSpan.FromSeconds(1),
+                    EasingFunction = new QuadraticEase(),
+                };
+                item.BeginAnimation(MarginProperty, ani2);
+            }
+            catch
+            {
+
             }
         }
         #endregion
@@ -1828,7 +2014,7 @@ namespace SellerScreen
                     if (error != true)
                     {
                         SaveSettings();
-                        SaveStorage();
+                        StorageSaver.RunWorkerAsync();
                         SaveTotalStatics();
                         SaveDayStatics();
                         Reload();
@@ -1953,6 +2139,7 @@ namespace SellerScreen
 
         private void StorageBuilder()
         {
+            MainProgBarShow();
             if (InStorageSlots.Length == 0)
             {
                 StorageNoProductsFoundLbl.Visibility = Visibility.Visible;
@@ -2177,12 +2364,15 @@ namespace SellerScreen
                         StorageUncheckAll();
                     }
                     logWindow.NewLog($"Building Storage successful", 1);
+                    NewMsgItem(MsgTypes.Success, "Lager", "Bauen des Lagers erfolgreich!", null);
                 }
                 catch (Exception ex)
                 {
                     logWindow.NewLog($"Building Storage failed! {ex.Message}", 2);
+                    NewMsgItem(MsgTypes.Error, "Lager", "Bauen des Lagers fehlgeschlagen!", ex.Message);
                 }
             }
+            MainProgBarHide();
         }
 
         private void StorageLoaderRun(object sender, DoWorkEventArgs e)
@@ -2264,13 +2454,24 @@ namespace SellerScreen
 
         private void StorageLoadComplete(object sender, RunWorkerCompletedEventArgs e)
         {
+            NewMsgItem(MsgTypes.Warning, "Lager", "Laden des Lagers abgeschlossen!", null);
             MainProgBarHide();
             StorageBuilder();
         }
 
-        private void SaveStorage()
+        private void StorageSaverProgress(object sender, ProgressChangedEventArgs e)
         {
+            MainProgBarShow();
+        }
 
+        private void StorageSaverComplete(object sender, RunWorkerCompletedEventArgs e)
+        {
+            MainProgBarHide();
+            StorageBuilder();
+        }
+
+        private void StorageStorageSaverRun(object sender, DoWorkEventArgs e)
+        {
             StorageData stoS = new StorageData();
             ProductsData proS = new ProductsData();
 
@@ -2282,7 +2483,7 @@ namespace SellerScreen
                 }
                 catch (Exception ex)
                 {
-                    logWindow.NewLog($"Error in Saving Storage/StorageSlotName{i} -> {ex.Message}", 2);
+
                 }
                 try
                 {
@@ -2290,7 +2491,7 @@ namespace SellerScreen
                 }
                 catch (Exception ex)
                 {
-                    logWindow.NewLog($"Error in Saving Storage/StorageSlotNumber{i} -> {ex.Message}", 2);
+
                 }
                 try
                 {
@@ -2298,7 +2499,7 @@ namespace SellerScreen
                 }
                 catch (Exception ex)
                 {
-                    logWindow.NewLog($"Error in Saving Storage/StorageSlotPrice{i} -> {ex.Message}", 2);
+
                 }
                 try
                 {
@@ -2306,16 +2507,15 @@ namespace SellerScreen
                 }
                 catch (Exception ex)
                 {
-                    logWindow.NewLog($"Error in Saving Storage/StorageSlotStatus{i} -> {ex.Message}", 2);
+
                 }
                 try
                 {
                     proS.Save(i);
-                    logWindow.NewLog($"Saving Product {i} successful", 1);
                 }
                 catch (Exception ex)
                 {
-                    logWindow.NewLog($"Saving Product {i} failed! {ex.Message}", 2);
+
                 }
             }
 
@@ -2323,11 +2523,10 @@ namespace SellerScreen
             {
                 stoS.InStorageSlots = InStorageSlots;
                 stoS.Save();
-                logWindow.NewLog($"Saving Storage successful", 1);
             }
             catch (Exception ex)
             {
-                logWindow.NewLog($"Saving Storage failed! {ex.Message}", 2);
+
             }
         }
 
@@ -2357,7 +2556,7 @@ namespace SellerScreen
 
                 StorageUncheckAll();
 
-                SaveStorage();
+                StorageSaver.RunWorkerAsync();
                 StorageLoader.RunWorkerAsync();
                 StorageBuilder();
             }
@@ -2380,7 +2579,7 @@ namespace SellerScreen
 
                 StorageUncheckAll();
                 StorageDeleteSpaces();
-                SaveStorage();
+                StorageSaver.RunWorkerAsync();
                 StorageLoader.RunWorkerAsync();
                 StorageBuilder();
             }
@@ -2414,7 +2613,7 @@ namespace SellerScreen
                 }
                 StorageUncheckAll();
 
-                SaveStorage();
+                StorageSaver.RunWorkerAsync();
                 StorageLoader.RunWorkerAsync();
                 StorageBuilder();
             }
@@ -2433,7 +2632,7 @@ namespace SellerScreen
                 }
                 StorageUncheckAll();
 
-                SaveStorage();
+                StorageSaver.RunWorkerAsync();
                 StorageLoader.RunWorkerAsync();
                 StorageBuilder();
             }
@@ -2465,7 +2664,7 @@ namespace SellerScreen
                     StorageSlotNumber[tag] = 0;
                 }
 
-                SaveStorage();
+                StorageSaver.RunWorkerAsync();
                 Reload();
             }
         }
@@ -3494,7 +3693,7 @@ namespace SellerScreen
 
             Array.Resize(ref StorageSlotPrice, StorageSlotPrice.Length + 1);
             StorageSlotPrice[StorageSlotPrice.Length - 1] = 0;
-            SaveStorage();
+            StorageSaver.RunWorkerAsync();
 
             logWindow.NewLog("Setting up TotalStatics...", 3);
             StaticsTotalStartDate = DateTime.Today;

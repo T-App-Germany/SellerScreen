@@ -11,6 +11,7 @@ namespace SellerScreen
     {
         public enum MsgButtons
         {
+            Ok,
             OkCancel,
             YesNo,
         }
@@ -74,6 +75,17 @@ namespace SellerScreen
 
                 ButtonPanel.Children.Add(btn);
                 ButtonPanel.Children.Add(btn2);
+            }
+            else
+            {
+                Button btn = new Button
+                {
+                    Content = "Ok",
+                    Margin = new Thickness(10),
+                    Width = 104,
+                    IsDefault = true
+                };
+                btn.Click += new RoutedEventHandler(DefaulBtn_Click);
             }
 
             string xamlString = "";

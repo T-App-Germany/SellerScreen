@@ -7,11 +7,7 @@ namespace SellerScreen
     [Serializable]
     public class StorageData
     {
-        public bool[] StorageSlotStatus = Array.Empty<bool>();
-        public short[] StorageSlotNumber = Array.Empty<short>();
-        public double[] StorageSlotPrice = Array.Empty<double>();
-        public string[] StorageSlotName = Array.Empty<string>();
-        public short StorageSlots = 0;
+        public short[] InStorageSlots = Array.Empty<short>();
 
         public void Save()
         {

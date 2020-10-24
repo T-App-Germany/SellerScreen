@@ -9,8 +9,10 @@ namespace SellerScreen
         public double slotPrice = 0;
         public bool slotStatus = false;
         public short slotNumber = 0;
-        private short id = 0;
-        private string task = "";
+        private readonly short id = 0;
+        private readonly string task = "";
+        private readonly ThemeData themeData = new ThemeData();
+        private readonly string AppThemeStr = "System";
 
         public EditStorageSlot(string windowTask, short idForTask)
         {
@@ -26,16 +28,7 @@ namespace SellerScreen
                 SlotNameTxtBox.Text = slotName;
                 NumberLbl.Content = slotNumber.ToString();
                 SlotPriceTxtBox.Text = slotPrice.ToString();
-                if (slotStatus == false)
-                {
-                    ActivateBtn.IsChecked = false;
-                    DeactivateBtn.IsChecked = true;
-                }
-                else
-                {
-                    ActivateBtn.IsChecked = true;
-                    DeactivateBtn.IsChecked = false;
-                }
+                StatusSwitch.IsOn = slotStatus;
 
                 Title = $"Produkt bearbeiten: {id + 1}";
             }
@@ -45,10 +38,11 @@ namespace SellerScreen
                 NumberLbl.Content = "0";
                 SlotPriceTxtBox.Text = "0";
                 slotStatus = false;
-                ActivateBtn.IsChecked = false;
-                DeactivateBtn.IsChecked = false;
+                StatusSwitch.IsOn = false;
                 Title = $"Produkt hinzufügen";
             }
+
+            SetAppTheme();
         }
 
         private void ApplyBtn_Click(object sender, RoutedEventArgs e)
@@ -56,7 +50,8 @@ namespace SellerScreen
             slotName = SlotNameTxtBox.Text;
             slotNumber += short.Parse(SlotAddNumberTxtBox.Text);
             slotPrice = double.Parse(SlotPriceTxtBox.Text);
-            
+            slotStatus = StatusSwitch.IsOn;
+
             DialogResult = true;
         }
 
@@ -66,16 +61,42 @@ namespace SellerScreen
             SlotNameTxtBoxCouterLbl.Content = i + "/32";
         }
 
-        private void DeactivateBtn_Click(object sender, RoutedEventArgs e)
+        private void SetAppTheme()
         {
-            ActivateBtn.IsChecked = false;
-            slotStatus = false;
+            if (AppThemeStr == "System")
+            {
+                string initialTheme = themeData.GetWindowsAppTheme().ToString();
+                if (initialTheme == "Dark")
+                {
+                    ApplyDarkTheme();
+                }
+                else if (initialTheme == "Light")
+                {
+                    ApplyLightTheme();
+                }
+            }
+            else if (AppThemeStr == "Light")
+            {
+                ApplyLightTheme();
+            }
+            else if (AppThemeStr == "Dark")
+            {
+                ApplyDarkTheme();
+            }
         }
 
-        private void ActivateBtn_Click(object sender, RoutedEventArgs e)
+        private void ApplyLightTheme()
         {
-            DeactivateBtn.IsChecked = false;
-            slotStatus = true;
+            TextFontColor.Background = themeData.GetLightTheme("TextFontColor");
+            SideBarsColor.Background = themeData.GetLightTheme("SideBarsColor");
+            PageBackgroudColor.Background = themeData.GetLightTheme("PageBackgroudColor");
+        }
+
+        private void ApplyDarkTheme()
+        {
+            TextFontColor.Background = themeData.GetDarkTheme("TextFontColor");
+            SideBarsColor.Background = themeData.GetDarkTheme("SideBarsColor");
+            PageBackgroudColor.Background = themeData.GetDarkTheme("PageBackgroudColor");
         }
     }
 }

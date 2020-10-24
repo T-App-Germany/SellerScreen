@@ -1,6 +1,5 @@
 ﻿using LiveCharts;
 using LiveCharts.Wpf;
-using Microsoft.Win32;
 using System;
 using System.ComponentModel;
 using System.Globalization;
@@ -10,6 +9,7 @@ using System.Reflection;
 using System.Security.Principal;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Markup;
 using System.Windows.Media;
@@ -23,7 +23,7 @@ using Path = System.IO.Path;
 
 namespace SellerScreen
 {
-    public partial class MainWindow : Window
+    public partial class MainWindow : IDisposable
     {
         #region Assemblyattributaccessoren
         private static string GetAssemblyTitle()
@@ -43,16 +43,6 @@ namespace SellerScreen
         private static string GetAssemblyVersion()
         {
             return Assembly.GetExecutingAssembly().GetName().Version.ToString();
-        }
-
-        private static string GetAssemblyDescription()
-        {
-            object[] attributes = Assembly.GetExecutingAssembly().GetCustomAttributes(typeof(AssemblyDescriptionAttribute), false);
-            if (attributes.Length == 0)
-            {
-                return "";
-            }
-            return ((AssemblyDescriptionAttribute)attributes[0]).Description;
         }
 
         private static string GetAssemblyProduct()
@@ -87,75 +77,115 @@ namespace SellerScreen
         #endregion
 
         #region Variablen
-        private enum WindowsTheme
+        private enum AppTheme
         {
             Light,
             Dark
         }
+        private enum Pages
+        {
+            Home,
+            Settings,
+            Help,
+            Shop,
+            TimeManager,
+            Statics,
+            UserManager,
+            Storage,
+            FileManager
+        }
 
         private DispatcherTimer MessageTimer { get; set; } = new DispatcherTimer();
-        private DispatcherTimer StaticsDaySelectionTimer{ get; set; } = new DispatcherTimer();
-        private DispatcherTimer AniTimer { get; set; } = new DispatcherTimer();
-        private readonly LogWindow logWindow = new LogWindow();
+        private DispatcherTimer StaticsDaySelectionTimer { get; set; } = new DispatcherTimer();
+        private DispatcherTimer SideObjectsAniTimer { get; set; } = new DispatcherTimer();
+        private BackgroundWorker StorageLoader { get; set; } = new BackgroundWorker();
+        private BackgroundWorker StorageSaver { get; set; } = new BackgroundWorker();
+        private BackgroundWorker TotalStaticsLoader { get; set; } = new BackgroundWorker();
+        private BackgroundWorker TotalStaticsSaver { get; set; } = new BackgroundWorker();
+        private BackgroundWorker DayStaticsLoader { get; set; } = new BackgroundWorker();
+        private BackgroundWorker DayStaticsSaver { get; set; } = new BackgroundWorker();
+        private BackgroundWorker SettingsLoader { get; set; } = new BackgroundWorker();
+        private BackgroundWorker SettingsSaver { get; set; } = new BackgroundWorker();
+        public object RegistryKeyPath { get; private set; }
+
+        private readonly LogWindow log = new LogWindow();
         private readonly PathName pathN = new PathName();
-
-        private const string RegistryKeyPath = @"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize";
-        private const string RegistryValueName = "AppsUseLightTheme";
-
-        private bool loadTotalStaticsError = false;
-        private bool loadDayStaticsError = false;
+        private readonly ThemeData themeData = new ThemeData();
+        private DateTime AppInstallStart;
         private DateTime lastPayDate = DateTime.Today.AddDays(-5);
-        private bool[] displayLogTypes = new bool[5];
-        private bool commissioningMode = false;
-        private string AppTheme = "System";
+        private bool AppInstallationMode = false;
+        private string AppThemeStr = "System";
+        private AppTheme Theme;
+        private bool AppThemeChanged = false;
         private readonly Random rnd = new Random();
-        private int cloudCount = -1;
-        private int page = 0;
+        private short SideObjectsCount = -1;
+        private Pages WindowPage = Pages.Home;
+        private int MsgNumber = -1;
+        private short MsgItemTarget = -1;
 
-        private short StorageSlots = 0;
-        private readonly int StorageLimitedNumber = 10;
+        private short StorageLimitedNumber = 10;
         private bool[] StorageSlotStatus = Array.Empty<bool>();
         private short[] StorageSlotNumber = Array.Empty<short>();
         private double[] StorageSlotPrice = Array.Empty<double>();
         private string[] StorageSlotName = Array.Empty<string>();
         private short StorageSelectedCount = 0;
         private bool[] StorageSelectedArray = Array.Empty<bool>();
+        private short[] InStorageSlots = Array.Empty<short>();
 
         private short selectedItemsInt = 0;
         private short[] ShopSlotSelectedNumber = Array.Empty<short>();
-        private string shopTask = "";
-        private double mainPrice = 0;
+        private string ShopTask = "";
+        private double ShopMainPrice = 0;
 
-        private string[] SoldSlotName = Array.Empty<string>();
-        private short[] SoldSlotNumber = Array.Empty<short>();
-        private double[] SoldSlotCash = Array.Empty<double>();
-        private double[] SoldSlotSinglePrice = Array.Empty<double>();
-        private int LostProducts;
-        private double LostCash;
-        private TimeSpan[] pcTime = new TimeSpan[2];
-        private int[] pcUsers = new int[2];
-        private string[] userList;
+        private string[] StaticsDaySoldSlotName = Array.Empty<string>();
+        private short[] StaticsDaySoldSlotNumber = Array.Empty<short>();
+        private double[] StaticsDaySoldSlotCash = Array.Empty<double>();
+        private double[] StaticsDaySoldSlotSinglePrice = Array.Empty<double>();
+        private short StaticsDayLostProducts;
+        private double StaticsDayLostCash;
 
-        private DateTime startDate;
-        private int totalCustomers;
-        private int totalSoldProducts;
-        private double totalGottenCash;
-        private int totalLostProducts;
-        private double totalLostCash;
-        private readonly TimeSpan[] totalPcTime = new TimeSpan[2];
-        private readonly int[] totalPcUsers = new int[2];
+        private TimeSpan[] StaticsDayPcUsage = Array.Empty<TimeSpan>();
+        private short[] StaticsDayPcUsers = Array.Empty<short>();
+        private string[] StaticsDayPcName = Array.Empty<string>();
+        private readonly TimeSpan[] StaticsTotalPcUsage = Array.Empty<TimeSpan>();
+        private readonly short[] StaticsTotalPcUsers = Array.Empty<short>();
+        private readonly string[] StaticsTotalPcName = Array.Empty<string>();
+
+        private DateTime StaticsTotalStartDate;
+        private int StaticsTotalCustomers;
+        private int StaticsTotalSoldProducts;
+        private double StaticsTotalGottenCash;
+        private int StaticsTotalLostProducts;
+        private double StaticsTotalLostCash;
 
         private readonly string[] mostSoldProductsName = new string[5];
         private readonly string[] highestEarningsProductsName = new string[5];
-        private readonly int[] mostSoldProductsNumber = new int[5];
+        private readonly short[] mostSoldProductsNumber = new short[5];
         private readonly double[] highestEarningsProductsNumber = new double[5];
-        private double[] mostSoldProductsSinglePrice = new double[5];
-        private double[] highestEarningsProductsSinglePrice = new double[5];
+        private readonly double[] mostSoldProductsSinglePrice = new double[5];
+        private readonly double[] highestEarningsProductsSinglePrice = new double[5];
 
         private string[] productsNameList = Array.Empty<string>();
-        private int[] productsNumberList = Array.Empty<int>();
+        private short[] productsNumberList = Array.Empty<short>();
         private double[] productsCashList = Array.Empty<double>();
         private double[] productsSinglePriceList = Array.Empty<double>();
+
+        private readonly DateTime ApplicationStart;
+        private DateTime StorageSaverStart;
+        private DateTime StorageLoaderStart;
+        private DateTime StorageBuildStart;
+        private DateTime ShopBuildingStart;
+        private DateTime ShopSellProductStart;
+        private DateTime ShopSellStart;
+        private DateTime TotalStaticsSaveStart;
+        private DateTime TotalStaticsLoadStart;
+        private DateTime TotalStaticsBuildStart;
+        private DateTime DayStaticsLoadStart;
+        private DateTime DayStaticsBuildStart;
+        private DateTime SettingsSaveStart;
+        private DateTime SettingsBuildStart;
+        private bool disposedValue;
+        private DateTime SettingsLoadStart;
 
         //private string[] planedUserNameList = Array.Empty<string>();
         //private int[] plannedUserStartTimeList = Array.Empty<int>();
@@ -165,6 +195,7 @@ namespace SellerScreen
         #region Window
         public MainWindow()
         {
+            ApplicationStart = DateTime.Now;
             InitializeComponent();
             AssemblyLbl.Content = $"{GetAssemblyProduct()}\t\tVersion {GetAssemblyVersion()}\t\t{GetAssemblyCopyright()}\t\t{GetAssemblyCompany()}";
             Title = GetAssemblyTitle();
@@ -176,52 +207,81 @@ namespace SellerScreen
             StaticsDaySelectionTimer.Tick += new EventHandler(StaticsDaySelectionTimer_Tick);
             StaticsDaySelectionTimer.Interval = new TimeSpan(0, 0, 0, 1, 5);
 
-            AniTimer.Tick += new EventHandler(AniTimer_Tick);
-            AniTimer.Interval = new TimeSpan(0, 0, 0, 2);
+            SideObjectsAniTimer.Tick += new EventHandler(AniTimer_Tick);
+            SideObjectsAniTimer.Interval = new TimeSpan(0, 0, 0, 2);
+
+            StorageLoader.DoWork += new DoWorkEventHandler(StorageLoaderRun);
+            StorageLoader.RunWorkerCompleted += new RunWorkerCompletedEventHandler(StorageLoadComplete);
+            StorageLoader.ProgressChanged += new ProgressChangedEventHandler(StorageLoaderProgress);
+
+            StorageSaver.DoWork += new DoWorkEventHandler(StorageStorageSaverRun);
+            StorageSaver.RunWorkerCompleted += new RunWorkerCompletedEventHandler(StorageSaverComplete);
+            StorageSaver.ProgressChanged += new ProgressChangedEventHandler(StorageSaverProgress);
+
+            TotalStaticsLoader.DoWork += new DoWorkEventHandler(TotalStaticsLoaderRun);
+            TotalStaticsLoader.RunWorkerCompleted += new RunWorkerCompletedEventHandler(TotalStaticsLoaderComplete);
+            TotalStaticsLoader.ProgressChanged += new ProgressChangedEventHandler(TotalStaticsLoaderProgress);
+
+            TotalStaticsSaver.DoWork += new DoWorkEventHandler(TotalStaticsSaverRun);
+            TotalStaticsSaver.RunWorkerCompleted += new RunWorkerCompletedEventHandler(TotalStaticsSaverComplete);
+            TotalStaticsSaver.ProgressChanged += new ProgressChangedEventHandler(TotalStaticsSaverProgress);
+
+            DayStaticsLoader.DoWork += new DoWorkEventHandler(DayStaticsLoaderRun);
+            DayStaticsLoader.RunWorkerCompleted += new RunWorkerCompletedEventHandler(DayStaticsLoaderComplete);
+            DayStaticsLoader.ProgressChanged += new ProgressChangedEventHandler(DayStaticsLoaderProgress);
+
+            DayStaticsSaver.DoWork += new DoWorkEventHandler(DayStaticsSaverRun);
+            DayStaticsSaver.RunWorkerCompleted += new RunWorkerCompletedEventHandler(DayStaticsSaverComplete);
+            DayStaticsSaver.ProgressChanged += new ProgressChangedEventHandler(DayStaticsSaverProgress);
+
+            SettingsSaver.DoWork += new DoWorkEventHandler(SettingsSaverRun);
+            SettingsSaver.RunWorkerCompleted += new RunWorkerCompletedEventHandler(SettingsSaverComplete);
+            SettingsSaver.ProgressChanged += new ProgressChangedEventHandler(SettingsSaverProgress);
+
+            SettingsLoader.DoWork += new DoWorkEventHandler(SettingsLoaderRun);
+            SettingsLoader.RunWorkerCompleted += new RunWorkerCompletedEventHandler(SettingsLoaderComplete);
+            SettingsLoader.ProgressChanged += new ProgressChangedEventHandler(SettingsLoaderProgress);
 
             Directory.CreateDirectory(Path.GetDirectoryName(pathN.settingsFile));
-            Directory.CreateDirectory(Path.GetDirectoryName(pathN.staticsFile));
-            Directory.CreateDirectory(Path.GetDirectoryName(pathN.logFile));
+            Directory.CreateDirectory(Path.GetDirectoryName(pathN.productsFile));
+            Directory.CreateDirectory(Path.GetDirectoryName(pathN.staticsTotalFile));
+            Directory.CreateDirectory(Path.GetDirectoryName(pathN.staticsDayFile));
             Directory.CreateDirectory(Path.GetDirectoryName(pathN.graphicsFile));
 
-            displayLogTypes[0] = true;
-            displayLogTypes[2] = true;
-            displayLogTypes[4] = true;
-            logWindow.displayLogTypes = displayLogTypes;
+            MsgPanel.Children.Clear();
 
             if (!File.Exists($"{pathN.settingsFile}Settings.xml") && !File.Exists($"{pathN.settingsFile}Storage.xml") && !File.Exists($"{pathN.settingsFile}TotalStatics.xml"))
             {
-                commissioningMode = true;
-                CommissioningMode();
+                AppInstallationMode = true;
+                InstallationMode();
             }
 
-            if (commissioningMode == false)
+            if (AppInstallationMode == false)
             {
                 Reload();
             }
 
-            PageChange(1);
-            SetWindowTheme();
+            PageChange(Pages.Home);
+            SetAppTheme();
             CloseShop();
-            WatchTheme();
             RefreshMaximizeRestoreButton();
+            WatchTheme();
         }
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
-            AniTimer.Start();
+            SideObjectsAniTimer.Start();
             StaticsDayYearUpDown.Value = DateTime.Now.Year;
             StaticsDayYearUpDown.Maximum = DateTime.Now.Year;
             StaticsDayMonthUpDown.Value = DateTime.Now.Month;
-            logWindow.NewLog($"Main_Window loaded", 0);
+            log.NewLog(LogWindow.LogTypes.Info, LogWindow.LogThread.Anwendung, LogWindow.LogActions.Geladen, null, DateTime.Now, DateTime.Now - ApplicationStart);
         }
 
         private void Window_Closing(object sender, CancelEventArgs e)
         {
             if (MessageBox.Show($"Möchten Sie {Title} wirklich schließen?", "Anwendung schließen", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
             {
-                logWindow.NewLog($"Main_Window closed", 0);
-                logWindow.NewLog($"Application is shutting down", 0);
+                log.NewLog(LogWindow.LogTypes.Info, LogWindow.LogThread.Anwendung, LogWindow.LogActions.Herunterfahren, null, DateTime.Now, TimeSpan.Zero);
                 Application.Current.Shutdown();
             }
             else
@@ -270,6 +330,31 @@ namespace SellerScreen
         {
             RefreshMaximizeRestoreButton();
         }
+
+        private void WatchTheme()
+        {
+            WindowsIdentity currentUser = WindowsIdentity.GetCurrent();
+            string query = string.Format(CultureInfo.InvariantCulture, @"SELECT * FROM RegistryValueChangeEvent WHERE Hive = 'HKEY_USERS' AND KeyPath = '{0}\\{1}' AND ValueName = '{2}'",
+                currentUser.User.Value, themeData.RegistryKeyPath.Replace(@"\", @"\\"), themeData.RegistryValueName);
+
+            try
+            {
+                ManagementEventWatcher watcher = new ManagementEventWatcher(query);
+                watcher.EventArrived += (sender, args) =>
+                {
+                    if (AppThemeStr == "System")
+                    {
+                        AppThemeChanged = true;
+                    }
+                };
+
+                watcher.Start();
+            }
+            catch (Exception ex)
+            {
+                log.NewLog(LogWindow.LogTypes.Warnung, LogWindow.LogThread.WindowsAppThema, LogWindow.LogActions.Lesen, ex.Message, DateTime.Now, TimeSpan.Zero);
+            }
+        }
         #endregion
 
         #region Timer
@@ -280,9 +365,9 @@ namespace SellerScreen
 
         private void AniTimer_Tick(object sender, EventArgs e)
         {
-            cloudCount++;
+            SideObjectsCount++;
 
-            if (cloudCount <= 10)
+            if (SideObjectsCount <= 10)
             {
                 try
                 {
@@ -296,7 +381,7 @@ namespace SellerScreen
                         Height = imgHeight,
                         Width = imgHeight * 3 / 2,
                         Source = new BitmapImage(new Uri($@"Resources/wolke{cloud}.png", UriKind.Relative)),
-                        Name = $"cloud{cloudCount}",
+                        Name = $"cloud{SideObjectsCount}",
                         Tag = cloud.ToString(),
                         HorizontalAlignment = HorizontalAlignment.Left,
                         VerticalAlignment = VerticalAlignment.Top
@@ -313,6 +398,11 @@ namespace SellerScreen
                     };
 
                     img.BeginAnimation(MarginProperty, ani);
+
+                    if (AppThemeStr == "System" && AppThemeChanged == true)
+                    {
+                        SetAppTheme();
+                    }
                 }
                 catch (Exception)
                 {
@@ -321,7 +411,7 @@ namespace SellerScreen
             }
             else
             {
-                AniTimer.Stop();
+                SideObjectsAniTimer.Stop();
 
                 try
                 {
@@ -334,40 +424,36 @@ namespace SellerScreen
                     };
                     ani.Completed += new EventHandler(FadeAni_Completed);
 
-                    for (int i = 0; i < cloudCount; i++)
+                    for (int i = 0; i < SideObjectsCount; i++)
                     {
                         Image img = (Image)FindName($"cloud{i}");
                         img.BeginAnimation(OpacityProperty, ani);
                         UnregisterName($"cloud{i}");
                     }
                 }
-                catch (Exception)
-                {
+                catch { }
 
-                }
-
-                cloudCount = -1;
+                SideObjectsCount = -1;
             }
         }
 
         private void FadeAni_Completed(object sender, EventArgs e)
         {
-            AniTimer.Start();
+            SideObjectsAniTimer.Start();
             SideBar.Children.Clear();
         }
         #endregion
 
         #region Funktionen
-        private void CommissioningMode()
+        private void InstallationMode()
         {
-            CommissioningModePanel.Visibility = Visibility.Visible;
+            InstallationModePanel.Visibility = Visibility.Visible;
             TopBar.IsEnabled = false;
         }
 
-        private void PageChange(int newPage)
+        private void PageChange(Pages newPage)
         {
-            bool error = false;
-            page = newPage;
+            WindowPage = newPage;
 
             DoubleAnimation aniOUT = new DoubleAnimation
             {
@@ -386,7 +472,7 @@ namespace SellerScreen
 
             switch (newPage)
             {
-                case 1:
+                case Pages.Home:
                     Page1Grid.BeginAnimation(OpacityProperty, aniIN);
                     Page2Grid.BeginAnimation(OpacityProperty, aniOUT);
                     Page3Grid.BeginAnimation(OpacityProperty, aniOUT);
@@ -399,7 +485,7 @@ namespace SellerScreen
 
                     Page1Grid.Visibility = Visibility.Visible;
                     break;
-                case 2:
+                case Pages.Settings:
                     Page1Grid.BeginAnimation(OpacityProperty, aniOUT);
                     Page2Grid.BeginAnimation(OpacityProperty, aniIN);
                     Page3Grid.BeginAnimation(OpacityProperty, aniOUT);
@@ -412,7 +498,7 @@ namespace SellerScreen
 
                     Page2Grid.Visibility = Visibility.Visible;
                     break;
-                case 3:
+                case Pages.Help:
                     Page1Grid.BeginAnimation(OpacityProperty, aniOUT);
                     Page2Grid.BeginAnimation(OpacityProperty, aniOUT);
                     Page3Grid.BeginAnimation(OpacityProperty, aniIN);
@@ -425,7 +511,7 @@ namespace SellerScreen
 
                     Page3Grid.Visibility = Visibility.Visible;
                     break;
-                case 4:
+                case Pages.Shop:
                     Page1Grid.BeginAnimation(OpacityProperty, aniOUT);
                     Page2Grid.BeginAnimation(OpacityProperty, aniOUT);
                     Page3Grid.BeginAnimation(OpacityProperty, aniOUT);
@@ -438,7 +524,7 @@ namespace SellerScreen
 
                     Page4Grid.Visibility = Visibility.Visible;
                     break;
-                case 5:
+                case Pages.TimeManager:
                     Page1Grid.BeginAnimation(OpacityProperty, aniOUT);
                     Page2Grid.BeginAnimation(OpacityProperty, aniOUT);
                     Page3Grid.BeginAnimation(OpacityProperty, aniOUT);
@@ -451,7 +537,7 @@ namespace SellerScreen
 
                     Page5Grid.Visibility = Visibility.Visible;
                     break;
-                case 6:
+                case Pages.Statics:
                     Page1Grid.BeginAnimation(OpacityProperty, aniOUT);
                     Page2Grid.BeginAnimation(OpacityProperty, aniOUT);
                     Page3Grid.BeginAnimation(OpacityProperty, aniOUT);
@@ -464,7 +550,7 @@ namespace SellerScreen
 
                     Page6Grid.Visibility = Visibility.Visible;
                     break;
-                case 7:
+                case Pages.UserManager:
                     Page1Grid.BeginAnimation(OpacityProperty, aniOUT);
                     Page2Grid.BeginAnimation(OpacityProperty, aniOUT);
                     Page3Grid.BeginAnimation(OpacityProperty, aniOUT);
@@ -477,7 +563,7 @@ namespace SellerScreen
 
                     Page7Grid.Visibility = Visibility.Visible;
                     break;
-                case 8:
+                case Pages.Storage:
                     Page1Grid.BeginAnimation(OpacityProperty, aniOUT);
                     Page2Grid.BeginAnimation(OpacityProperty, aniOUT);
                     Page3Grid.BeginAnimation(OpacityProperty, aniOUT);
@@ -490,7 +576,7 @@ namespace SellerScreen
 
                     Page8Grid.Visibility = Visibility.Visible;
                     break;
-                case 9:
+                case Pages.FileManager:
                     Page1Grid.BeginAnimation(OpacityProperty, aniOUT);
                     Page2Grid.BeginAnimation(OpacityProperty, aniOUT);
                     Page3Grid.BeginAnimation(OpacityProperty, aniOUT);
@@ -503,24 +589,14 @@ namespace SellerScreen
 
                     Page9Grid.Visibility = Visibility.Visible;
                     break;
-                default:
-                    MessageBox.Show($"Die Seite {newPage} konnte nicht gefunden werden", "Menu Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
-                    logWindow.NewLog($"Changing Page to PageID {newPage} failed! Internal ERROR", 2);
-                    error = true;
-                    break;
-            }
-
-            if (error != true)
-            {
-                logWindow.NewLog($"Changing Page to PageID {newPage} successful", 1);
             }
         }
 
         private void PageFadeOut_Comleted(object sender, EventArgs e)
         {
-            switch (page)
+            switch (WindowPage)
             {
-                case 1:
+                case Pages.Home:
                     Page2Grid.Visibility = Visibility.Collapsed;
                     Page3Grid.Visibility = Visibility.Collapsed;
                     Page4Grid.Visibility = Visibility.Collapsed;
@@ -530,7 +606,7 @@ namespace SellerScreen
                     Page8Grid.Visibility = Visibility.Collapsed;
                     Page9Grid.Visibility = Visibility.Collapsed;
                     break;
-                case 2:
+                case Pages.Settings:
                     Page1Grid.Visibility = Visibility.Collapsed;
                     Page3Grid.Visibility = Visibility.Collapsed;
                     Page4Grid.Visibility = Visibility.Collapsed;
@@ -540,7 +616,7 @@ namespace SellerScreen
                     Page8Grid.Visibility = Visibility.Collapsed;
                     Page9Grid.Visibility = Visibility.Collapsed;
                     break;
-                case 3:
+                case Pages.Help:
                     Page1Grid.Visibility = Visibility.Collapsed;
                     Page2Grid.Visibility = Visibility.Collapsed;
                     Page4Grid.Visibility = Visibility.Collapsed;
@@ -550,7 +626,7 @@ namespace SellerScreen
                     Page8Grid.Visibility = Visibility.Collapsed;
                     Page9Grid.Visibility = Visibility.Collapsed;
                     break;
-                case 4:
+                case Pages.Shop:
                     Page1Grid.Visibility = Visibility.Collapsed;
                     Page2Grid.Visibility = Visibility.Collapsed;
                     Page3Grid.Visibility = Visibility.Collapsed;
@@ -560,7 +636,7 @@ namespace SellerScreen
                     Page8Grid.Visibility = Visibility.Collapsed;
                     Page9Grid.Visibility = Visibility.Collapsed;
                     break;
-                case 5:
+                case Pages.TimeManager:
                     Page1Grid.Visibility = Visibility.Collapsed;
                     Page2Grid.Visibility = Visibility.Collapsed;
                     Page3Grid.Visibility = Visibility.Collapsed;
@@ -570,7 +646,7 @@ namespace SellerScreen
                     Page8Grid.Visibility = Visibility.Collapsed;
                     Page9Grid.Visibility = Visibility.Collapsed;
                     break;
-                case 6:
+                case Pages.Statics:
                     Page1Grid.Visibility = Visibility.Collapsed;
                     Page2Grid.Visibility = Visibility.Collapsed;
                     Page3Grid.Visibility = Visibility.Collapsed;
@@ -580,7 +656,7 @@ namespace SellerScreen
                     Page8Grid.Visibility = Visibility.Collapsed;
                     Page9Grid.Visibility = Visibility.Collapsed;
                     break;
-                case 7:
+                case Pages.UserManager:
                     Page1Grid.Visibility = Visibility.Collapsed;
                     Page2Grid.Visibility = Visibility.Collapsed;
                     Page3Grid.Visibility = Visibility.Collapsed;
@@ -590,7 +666,7 @@ namespace SellerScreen
                     Page8Grid.Visibility = Visibility.Collapsed;
                     Page9Grid.Visibility = Visibility.Collapsed;
                     break;
-                case 8:
+                case Pages.Storage:
                     Page1Grid.Visibility = Visibility.Collapsed;
                     Page2Grid.Visibility = Visibility.Collapsed;
                     Page3Grid.Visibility = Visibility.Collapsed;
@@ -600,7 +676,7 @@ namespace SellerScreen
                     Page7Grid.Visibility = Visibility.Collapsed;
                     Page9Grid.Visibility = Visibility.Collapsed;
                     break;
-                case 9:
+                case Pages.FileManager:
                     Page1Grid.Visibility = Visibility.Collapsed;
                     Page2Grid.Visibility = Visibility.Collapsed;
                     Page3Grid.Visibility = Visibility.Collapsed;
@@ -615,24 +691,16 @@ namespace SellerScreen
 
         private void Reload()
         {
-            MainProgBarShow();
-            LoadSettings();
-            LoadStorage();
-            LoadTotalStatics();
-            LoadDayStatics(DateTime.Now.Date);
-            BuildSettings();
-            BuildStorage(GetWindowsTheme());
-            BuildShop(GetWindowsTheme(), "storage");
-            BuildTotalStatics();
-            BuildDayStatics();
-            MainProgBarHide();
+            SettingsLoader.RunWorkerAsync();
+            StorageLoader.RunWorkerAsync();
+            TotalStaticsLoader.RunWorkerAsync();
+            DayStaticsLoader.RunWorkerAsync(DateTime.Now.Date);
         }
 
         private void MainProgBarShow()
         {
             DoubleAnimation ani = new DoubleAnimation
             {
-                From = 0,
                 To = 5,
                 Duration = TimeSpan.FromSeconds(1),
                 EasingFunction = new QuarticEase()
@@ -645,7 +713,6 @@ namespace SellerScreen
         {
             DoubleAnimation ani = new DoubleAnimation
             {
-                From = 5,
                 To = 0,
                 Duration = TimeSpan.FromSeconds(1),
                 EasingFunction = new QuarticEase()
@@ -654,79 +721,58 @@ namespace SellerScreen
             MainProgBar.BeginAnimation(HeightProperty, ani);
         }
 
-        private void WatchTheme()
+        private void SetAppTheme()
         {
-            var currentUser = WindowsIdentity.GetCurrent();
-            string query = string.Format(CultureInfo.InvariantCulture, @"SELECT * FROM RegistryValueChangeEvent WHERE Hive = 'HKEY_USERS' AND KeyPath = '{0}\\{1}' AND ValueName = '{2}'",
-                currentUser.User.Value, RegistryKeyPath.Replace(@"\", @"\\"), RegistryValueName);
-
-            try
+            if (AppThemeStr == "System")
             {
-                var watcher = new ManagementEventWatcher(query);
-                watcher.EventArrived += (sender, args) =>
+                string initialTheme = themeData.GetWindowsAppTheme().ToString();
+                if (initialTheme == "Dark")
                 {
-                    WindowsTheme newWindowsTheme = GetWindowsTheme();
-                    // React to new theme
-                    if (AppTheme == "System")
-                    {
-                        MessageBox.Show("Das System-App-Thema wurde geändert. Um dieses anzuwenden, müssen Sie in den Einstellungen das Thema manuell aktualisieren.", "Windows Thema", MessageBoxButton.OK, MessageBoxImage.Information);
-                    }
-                };
-
-                // Start listening for events
-                watcher.Start();
-            }
-            catch (Exception ex)
-            {
-                logWindow.NewLog($"Application is not able to read WindowsTheme! {ex.Message}", 2);
-            }
-        }
-
-        private static WindowsTheme GetWindowsTheme()
-        {
-            using (RegistryKey key = Registry.CurrentUser.OpenSubKey(RegistryKeyPath))
-            {
-                object registryValueObject = key?.GetValue(RegistryValueName);
-                if (registryValueObject == null)
-                {
-                    return WindowsTheme.Light;
-                }
-
-                int registryValue = (int)registryValueObject;
-
-                return registryValue > 0 ? WindowsTheme.Light : WindowsTheme.Dark;
-            }
-        }
-
-        private void SetWindowTheme()
-        {
-            if (AppTheme == "System")
-            {
-                WindowsTheme initialTheme = GetWindowsTheme();
-                if (initialTheme == WindowsTheme.Dark)
                     ApplyDarkTheme();
-                else if (initialTheme == WindowsTheme.Light)
+                }
+                else if (initialTheme == "Light")
+                {
                     ApplyLightTheme();
+                }
             }
-            else if (AppTheme == "Light")
+            else if (AppThemeStr == "Light")
+            {
                 ApplyLightTheme();
-            else if (AppTheme == "Dark")
+            }
+            else if (AppThemeStr == "Dark")
+            {
                 ApplyDarkTheme();
+            }
+
+            log.SetAppTheme();
         }
 
         private void ApplyLightTheme()
         {
-            SeperatorColor.Background = (Brush)new BrushConverter().ConvertFrom("#FFA0A0A0");
-            ChromeBtnColor.Background = (Brush)new BrushConverter().ConvertFrom("#FF212121");
+            TextFontColor.Background = themeData.GetLightTheme("TextFontColor");
+            SideBarsColor.Background = themeData.GetLightTheme("SideBarsColor");
+            MainMenuGrid.Background = themeData.GetLightTheme("MainMenuGrid");
+            PageBackgroudColor.Background = themeData.GetLightTheme("PageBackgroudColor");
+            SeperatorColor.Background = themeData.GetLightTheme("SeperatorColor");
+            ChromeBtnColor.Background = themeData.GetLightTheme("ChromeBtnColor");
+            Theme = AppTheme.Light;
+
+            StorageBuilder();
+            BuildShop(AppThemeStr, "storage");
         }
 
         private void ApplyDarkTheme()
         {
-            TextFontColor.Background = (Brush)new BrushConverter().ConvertFrom("#FFFFFFFF");
-            SideBarsColor.Background = (Brush)new BrushConverter().ConvertFrom("#48484A");
-            PageBackgroudColor.Background = (Brush)new BrushConverter().ConvertFrom("#FF323232");
-            SeperatorColor.Background = (Brush)new BrushConverter().ConvertFrom("#FFFFFFFF");
-            ChromeBtnColor.Background = (Brush)new BrushConverter().ConvertFrom("#FFF6F6F6");
+            TextFontColor.Background = themeData.GetDarkTheme("TextFontColor");
+            SideBarsColor.Background = themeData.GetDarkTheme("SideBarsColor");
+            MainMenuGrid.Background = themeData.GetDarkTheme("MainMenuGrid");
+            PageBackgroudColor.Background = themeData.GetDarkTheme("PageBackgroudColor");
+            SeperatorColor.Background = themeData.GetDarkTheme("SeperatorColor");
+            ChromeBtnColor.Background = themeData.GetDarkTheme("ChromeBtnColor");
+            Theme = AppTheme.Dark;
+
+            StorageBuilder();
+            BuildShop(AppThemeStr, "storage");
         }
 
         private void SlotItemMouseLeave(object sender, MouseEventArgs e)
@@ -756,6 +802,91 @@ namespace SellerScreen
                 scp.BeginAnimation(MarginProperty, ani);
             }
         }
+
+        private void NewMsgItem(LogWindow.LogTypes type, LogWindow.LogThread thread, string bodyText, string ex)
+        {
+            MsgNumber++;
+
+            if (type == LogWindow.LogTypes.Fehler)
+            {
+                MsgItemTemp.BorderBrush = Brushes.Red;
+                MsgItemBackTemp.Background = Brushes.Red;
+            }
+            else if (type == LogWindow.LogTypes.Erfolg)
+            {
+                MsgItemTemp.BorderBrush = Brushes.Green;
+                MsgItemBackTemp.Background = Brushes.Green;
+            }
+            else if (type == LogWindow.LogTypes.Warnung)
+            {
+                MsgItemTemp.BorderBrush = Brushes.Orange;
+                MsgItemBackTemp.Background = Brushes.Orange;
+            }
+            else if (type == LogWindow.LogTypes.Info)
+            {
+                MsgItemTemp.BorderBrush = Brushes.DarkCyan;
+                MsgItemBackTemp.Background = Brushes.DarkCyan;
+            }
+
+            MsgItemBodyTemp.Text = bodyText;
+            MsgItemHeaderTemp.Text = thread.ToString();
+
+
+            MsgItemBodyTemp.Foreground = TextFontColor.Background;
+            MsgItemHeaderTemp.Foreground = TextFontColor.Background;
+
+            if (!string.IsNullOrEmpty(ex))
+            {
+                MsgItemBodyTemp.Inlines.Add(new LineBreak());
+                MsgItemBodyTemp.Inlines.Add(new Run(ex) { FontStyle = FontStyles.Italic });
+            }
+
+            string xamlString = XamlWriter.Save(MsgItemTemp);
+            StringReader stringReader = new StringReader(xamlString);
+            XmlReader xmlReader = XmlReader.Create(stringReader);
+            Border item = (Border)XamlReader.Load(xmlReader);
+            item.Name = $"MsgItem{MsgNumber}";
+            item.Opacity = 0;
+            item.Visibility = Visibility.Visible;
+            Grid grid = (Grid)item.Child;
+            Grid prog = (Grid)grid.Children[3];
+            DoubleAnimation ani1 = new DoubleAnimation
+            {
+                To = 1,
+                Duration = TimeSpan.FromSeconds(1),
+            };
+            DoubleAnimation ani = new DoubleAnimation
+            {
+                To = 0,
+                Duration = TimeSpan.FromSeconds(6),
+            };
+            ani.Completed += new EventHandler(MsgTimeOut);
+
+            MsgPanel.Children.Insert(0, item);
+            MsgItemTarget++;
+            item.BeginAnimation(OpacityProperty, ani1);
+            prog.BeginAnimation(WidthProperty, ani);
+        }
+
+        private void MsgTimeOut(object sender, EventArgs e)
+        {
+            Border item = (Border)MsgPanel.Children[MsgItemTarget];
+            MsgItemTarget--;
+
+            DoubleAnimation ani = new DoubleAnimation
+            {
+                To = 0,
+                Duration = TimeSpan.FromSeconds(1),
+                EasingFunction = new PowerEase(),
+            };
+            ani.Completed += new EventHandler(MsgHidden);
+            item.BeginAnimation(OpacityProperty, ani);
+        }
+
+        private void MsgHidden(object sender, EventArgs e)
+        {
+            MsgPanel.Children.RemoveAt(MsgPanel.Children.Count - 1);
+        }
         #endregion
 
         #region Menu
@@ -766,11 +897,12 @@ namespace SellerScreen
 
         private void OpenLog(object sender, RoutedEventArgs e)
         {
-            logWindow.Show();
-            logWindow.ShowInTaskbar = true;
-            logWindow.ShowActivated = true;
-            logWindow.WindowState = System.Windows.WindowState.Normal;
-            logWindow.ScrollView.ScrollToBottom();
+            log.AppThemeStr = AppThemeStr;
+            log.SetAppTheme();
+            log.ShowInTaskbar = true;
+            log.ShowActivated = true;
+            log.WindowState = System.Windows.WindowState.Normal;
+            log.Show();
         }
 
         private void MainMenuPageImg_MouseEnter(object sender, MouseEventArgs e)
@@ -824,31 +956,31 @@ namespace SellerScreen
                 switch (tag)
                 {
                     case 1:
-                        PageChange(1);
+                        PageChange(Pages.Home);
                         break;
                     case 2:
-                        PageChange(2);
+                        PageChange(Pages.Settings);
                         break;
                     case 3:
-                        PageChange(3);
+                        PageChange(Pages.Help);
                         break;
                     case 4:
-                        PageChange(4);
+                        PageChange(Pages.Shop);
                         break;
                     case 5:
-                        PageChange(5);
+                        PageChange(Pages.TimeManager);
                         break;
                     case 6:
-                        PageChange(6);
+                        PageChange(Pages.Statics);
                         break;
                     case 7:
-                        PageChange(7);
+                        PageChange(Pages.UserManager);
                         break;
                     case 8:
-                        PageChange(8);
+                        PageChange(Pages.Storage);
                         break;
                     case 9:
-                        PageChange(9);
+                        PageChange(Pages.FileManager);
                         break;
                 }
             }
@@ -897,13 +1029,13 @@ namespace SellerScreen
             {
                 int tag = int.Parse(btn.Tag.ToString());
                 short maxCount;
-                if (shopTask == "sell")
+                if (ShopTask == "sell")
                 {
                     maxCount = StorageSlotNumber[tag];
                 }
                 else
                 {
-                    maxCount = SoldSlotNumber[tag];
+                    maxCount = StaticsDaySoldSlotNumber[tag];
                 }
 
                 if (ShopSlotSelectedNumber[tag] < maxCount)
@@ -926,13 +1058,13 @@ namespace SellerScreen
             {
                 short tag = short.Parse(iup.Tag.ToString());
                 short maxCount;
-                if (shopTask == "sell")
+                if (ShopTask == "sell")
                 {
                     maxCount = StorageSlotNumber[tag];
                 }
                 else
                 {
-                    maxCount = SoldSlotNumber[tag];
+                    maxCount = StaticsDaySoldSlotNumber[tag];
                 }
 
                 if (ShopSlotSelectedNumber[tag] < maxCount)
@@ -949,8 +1081,9 @@ namespace SellerScreen
             }
         }
 
-        private void BuildShop(WindowsTheme theme, string from)
+        private void BuildShop(string theme, string from)
         {
+            ShopBuildingStart = DateTime.Now;
             int length = 0;
             string name = "";
             short number = 0;
@@ -959,13 +1092,13 @@ namespace SellerScreen
 
             if (from == "storage")
             {
-                length = StorageSlots;
-                Array.Resize(ref ShopSlotSelectedNumber, StorageSlots + 1);
+                length = InStorageSlots.Length;
+                Array.Resize(ref ShopSlotSelectedNumber, InStorageSlots.Length);
             }
             else
             {
-                length = SoldSlotSinglePrice.Length;
-                Array.Resize(ref ShopSlotSelectedNumber, SoldSlotSinglePrice.Length);
+                length = StaticsDaySoldSlotSinglePrice.Length;
+                Array.Resize(ref ShopSlotSelectedNumber, StaticsDaySoldSlotSinglePrice.Length);
             }
 
             try
@@ -988,9 +1121,9 @@ namespace SellerScreen
                             break;
 
                         case "statics":
-                            name = SoldSlotName[i];
-                            number = SoldSlotNumber[i];
-                            price = SoldSlotSinglePrice[i];
+                            name = StaticsDaySoldSlotName[i];
+                            number = StaticsDaySoldSlotNumber[i];
+                            price = StaticsDaySoldSlotSinglePrice[i];
                             if (number > 0)
                             {
                                 status = true;
@@ -1005,7 +1138,7 @@ namespace SellerScreen
                             break;
                     }
 
-                    Array.Resize(ref ShopSlotSelectedNumber, StorageSlots + 1);
+                    Array.Resize(ref ShopSlotSelectedNumber, InStorageSlots.Length);
 
                     if (status == true)
                     {
@@ -1129,7 +1262,7 @@ namespace SellerScreen
                             Maximum = number,
                             Minimum = 0
                         };
-                        iup.ValueChanged += new RoutedPropertyChangedEventHandler<object>(ShopSlotSellNumberUpDown_ValueChanged); 
+                        iup.ValueChanged += new RoutedPropertyChangedEventHandler<object>(ShopSlotSellNumberUpDown_ValueChanged);
 
                         Button plusBtn = new Button()
                         {
@@ -1219,10 +1352,14 @@ namespace SellerScreen
                         }
                         else
                         {
-                            if (theme == WindowsTheme.Light)
+                            if (theme == "Light")
+                            {
                                 slotScp.Background = Brushes.LightGray;
+                            }
                             else
+                            {
                                 slotScp.Background = (Brush)new BrushConverter().ConvertFrom("#FF555555");
+                            }
                         }
 
                         slotScp.MouseEnter += new MouseEventHandler(SlotItemMouseEnter);
@@ -1298,18 +1435,16 @@ namespace SellerScreen
                         RegisterName(slotScp.Name, slotScp);
                     }
                 }
-                logWindow.NewLog($"Building Shop successful", 1);
+                log.NewLog(LogWindow.LogTypes.Erfolg, LogWindow.LogThread.Kasse, LogWindow.LogActions.Bauen, null, DateTime.Now, DateTime.Now - ShopBuildingStart);
             }
             catch (Exception ex)
             {
-                logWindow.NewLog($"Building Shop failed! {ex.Message}", 2);
-
+                log.NewLog(LogWindow.LogTypes.Fehler, LogWindow.LogThread.Kasse, LogWindow.LogActions.Bauen, ex.Message, DateTime.Now, DateTime.Now - ShopBuildingStart);
             }
 
             NewPurchaseBtn.IsEnabled = true;
             ShopNoProductsFoundLbl.Visibility = Visibility.Collapsed;
             ShopProductsGrid.Visibility = Visibility.Visible;
-            logWindow.NewLog($"Building Shop successful", 1);
             NewPurchaseBtn.IsEnabled = true;
 
             if (ShopSlotsPanel.Children.Count == 0)
@@ -1554,26 +1689,26 @@ namespace SellerScreen
         private void GetMainPrice()
         {
             double[] price;
-            if (shopTask == "sell")
+            if (ShopTask == "sell")
             {
                 price = StorageSlotPrice;
             }
             else
             {
-                price = SoldSlotSinglePrice;
+                price = StaticsDaySoldSlotSinglePrice;
             }
 
-            mainPrice = 0;
+            ShopMainPrice = 0;
             for (int i = 0; i < price.Length; i++)
             {
                 double singlePrice = ShopSlotSelectedNumber[i] * price[i];
                 string txt = singlePrice.ToString();
-                mainPrice += double.Parse(txt);
+                ShopMainPrice += double.Parse(txt);
             }
-            ShopMainPriceTxtBlock.Content = $"{mainPrice}";
+            ShopMainPriceTxtBlock.Content = $"{ShopMainPrice}";
             for (int t = 0; t < 10; t++)
             {
-                bool endsWithSearchResult = mainPrice.ToString().EndsWith($",{t}", StringComparison.CurrentCultureIgnoreCase);
+                bool endsWithSearchResult = ShopMainPrice.ToString().EndsWith($",{t}", StringComparison.CurrentCultureIgnoreCase);
                 if (endsWithSearchResult == true)
                 {
                     ShopMainPriceTxtBlock.Content += "0";
@@ -1591,7 +1726,7 @@ namespace SellerScreen
             }
 
             GetMainPrice();
-            BuildShop(GetWindowsTheme(), "storage");
+            BuildShop(themeData.GetWindowsAppTheme().ToString(), "storage");
         }
 
         private void NewPurchaseBtn_Click(object sender, RoutedEventArgs e)
@@ -1600,8 +1735,8 @@ namespace SellerScreen
             OpenShop();
 
             TopBar.IsEnabled = false;
-            shopTask = "sell";
-            CustomerNumberTxtBlock.Content = totalCustomers + 1;
+            ShopTask = "sell";
+            CustomerNumberTxtBlock.Content = StaticsTotalCustomers + 1;
         }
 
         private void CancelPurchaseBtn_Click(object sender, RoutedEventArgs e)
@@ -1609,8 +1744,8 @@ namespace SellerScreen
             OpenShop();
 
             TopBar.IsEnabled = false;
-            shopTask = "cancel";
-            CustomerNumberTxtBlock.Content = totalCustomers;
+            ShopTask = "cancel";
+            CustomerNumberTxtBlock.Content = StaticsTotalCustomers;
         }
 
         private void ComplainPurchaseBtn_Click(object sender, RoutedEventArgs e)
@@ -1618,13 +1753,13 @@ namespace SellerScreen
             OpenShop();
 
             TopBar.IsEnabled = false;
-            shopTask = "complain";
-            CustomerNumberTxtBlock.Content = totalCustomers;
+            ShopTask = "complain";
+            CustomerNumberTxtBlock.Content = StaticsTotalCustomers;
         }
 
         private void CancelComplainPurchaseBtn_GotFocus(object sender, RoutedEventArgs e)
         {
-            BuildShop(GetWindowsTheme(), "statics");
+            BuildShop(themeData.GetWindowsAppTheme().ToString(), "statics");
         }
 
         private void CancelShoppingBtn_Click(object sender, RoutedEventArgs e)
@@ -1632,7 +1767,7 @@ namespace SellerScreen
             CloseShop();
 
             TopBar.IsEnabled = true;
-            shopTask = "";
+            ShopTask = "";
             ClearShoppingCard();
             Reload();
         }
@@ -1647,9 +1782,10 @@ namespace SellerScreen
 
         private void PayPurchaseBtn_Click(object sender, RoutedEventArgs e)
         {
+            ShopSellStart = DateTime.Now;
             CloseShop();
 
-            for (int i = 0; i < StorageSlots; i++)
+            for (int i = 0; i < InStorageSlots.Length; i++)
             {
                 selectedItemsInt += ShopSlotSelectedNumber[i];
             }
@@ -1660,190 +1796,185 @@ namespace SellerScreen
             }
             else
             {
-                LoadTotalStatics();
-                LoadDayStatics(DateTime.Now.Date);
+                bool error = false;
+                GetMainPrice();
 
-                if (loadTotalStaticsError != true)
+                if (ShopTask == "sell")
                 {
-                    bool error = false;
-                    GetMainPrice();
+                    ShopSellProductStart = DateTime.Now;
+                    StaticsTotalCustomers++;
+                    StaticsTotalGottenCash += ShopMainPrice;
 
-                    if (shopTask == "sell")
+                    for (int n = 0; n < InStorageSlots.Length; n++)
                     {
-                        totalCustomers++;
-                        totalGottenCash += mainPrice;
+                        if (ShopSlotSelectedNumber[n] != 0)
+                        {
+                            try
+                            {
+                                StorageSlotNumber[n] -= ShopSlotSelectedNumber[n];
+                                StaticsTotalSoldProducts += ShopSlotSelectedNumber[n];
 
-                        for (int n = 0; n < StorageSlots; n++)
+                                int i = -1;
+                                bool productFound = false;
+                                foreach (string s in productsNameList)
+                                {
+                                    i++;
+                                    if (StorageSlotName[n] == s && StorageSlotPrice[n] == productsSinglePriceList[n])
+                                    {
+                                        productsNumberList[i] += ShopSlotSelectedNumber[n];
+                                        productsCashList[i] += ShopSlotSelectedNumber[n] * StorageSlotPrice[n];
+                                        productFound = true;
+                                        break;
+                                    }
+                                }
+                                if (productFound == false)
+                                {
+                                    Array.Resize(ref productsNameList, productsNameList.Length + 1);
+                                    productsNameList[productsNameList.Length - 1] = StorageSlotName[n];
+
+                                    Array.Resize(ref productsNumberList, productsNumberList.Length + 1);
+                                    productsNumberList[productsNumberList.Length - 1] = ShopSlotSelectedNumber[n];
+
+                                    Array.Resize(ref productsCashList, productsCashList.Length + 1);
+                                    productsCashList[productsCashList.Length - 1] = StorageSlotPrice[n] * ShopSlotSelectedNumber[n];
+
+                                    Array.Resize(ref productsSinglePriceList, productsSinglePriceList.Length + 1);
+                                    productsSinglePriceList[productsSinglePriceList.Length - 1] = StorageSlotPrice[n];
+                                }
+
+                                i = -1;
+                                productFound = false;
+                                foreach (string s in StaticsDaySoldSlotName)
+                                {
+                                    i++;
+                                    if (StorageSlotName[n] == s && StorageSlotPrice[n] == productsSinglePriceList[n])
+                                    {
+                                        StaticsDaySoldSlotNumber[i] += ShopSlotSelectedNumber[n];
+                                        StaticsDaySoldSlotCash[i] += ShopSlotSelectedNumber[n] * StorageSlotPrice[n];
+                                        productFound = true;
+                                        break;
+                                    }
+                                }
+                                if (productFound == false)
+                                {
+                                    Array.Resize(ref StaticsDaySoldSlotName, StaticsDaySoldSlotName.Length + 1);
+                                    StaticsDaySoldSlotName[StaticsDaySoldSlotName.Length - 1] = StorageSlotName[n];
+
+                                    Array.Resize(ref StaticsDaySoldSlotNumber, StaticsDaySoldSlotNumber.Length + 1);
+                                    StaticsDaySoldSlotNumber[StaticsDaySoldSlotNumber.Length - 1] = ShopSlotSelectedNumber[n];
+
+                                    Array.Resize(ref StaticsDaySoldSlotCash, StaticsDaySoldSlotCash.Length + 1);
+                                    StaticsDaySoldSlotCash[StaticsDaySoldSlotCash.Length - 1] = StorageSlotPrice[n] * ShopSlotSelectedNumber[n];
+
+                                    Array.Resize(ref StaticsDaySoldSlotSinglePrice, StaticsDaySoldSlotSinglePrice.Length + 1);
+                                    StaticsDaySoldSlotSinglePrice[StaticsDaySoldSlotSinglePrice.Length - 1] = StorageSlotPrice[n];
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                log.NewLog(LogWindow.LogTypes.Fehler, LogWindow.LogThread.Kasse, LogWindow.LogActions.Verkaufen, $"Produkt {n + 1}: {ex.Message}", DateTime.Now, DateTime.Now - ShopSellProductStart);
+                            }
+                        }
+                    }
+
+                    lastPayDate = DateTime.Now.Date;
+                    log.NewLog(LogWindow.LogTypes.Info, LogWindow.LogThread.Kasse, LogWindow.LogActions.Verkaufen, $"Abgeschlossen", DateTime.Now, DateTime.Now - ShopSellStart);
+                }
+                else if (ShopTask == "cancel")
+                {
+                    ShopSellProductStart = DateTime.Now;
+                    StorageLoader.RunWorkerAsync();
+                    StaticsTotalGottenCash -= ShopMainPrice;
+
+                    for (int n = 0; n < StaticsDaySoldSlotName.Length; n++)
+                    {
+                        try
                         {
                             if (ShopSlotSelectedNumber[n] != 0)
                             {
-                                try
+                                int i = -1;
+                                foreach (string s in productsNameList)
                                 {
-                                    StorageSlotNumber[n] -= ShopSlotSelectedNumber[n];
-                                    totalSoldProducts += ShopSlotSelectedNumber[n];
-
-                                    int i = -1;
-                                    bool productFound = false;
-                                    foreach (string s in productsNameList)
+                                    i++;
+                                    if (StaticsDaySoldSlotName[n] == s && StorageSlotPrice[n] == productsSinglePriceList[n])
                                     {
-                                        i++;
-                                        if (StorageSlotName[n] == s && StorageSlotPrice[n] == productsSinglePriceList[n])
-                                        {
-                                            productsNumberList[i] += ShopSlotSelectedNumber[n];
-                                            productsCashList[i] += ShopSlotSelectedNumber[n] * StorageSlotPrice[n];
-                                            productFound = true;
-                                            break;
-                                        }
-                                    }
-                                    if (productFound == false)
-                                    {
-                                        Array.Resize(ref productsNameList, productsNameList.Length + 1);
-                                        productsNameList[productsNameList.Length - 1] = StorageSlotName[n];
-
-                                        Array.Resize(ref productsNumberList, productsNumberList.Length + 1);
-                                        productsNumberList[productsNumberList.Length - 1] = ShopSlotSelectedNumber[n];
-
-                                        Array.Resize(ref productsCashList, productsCashList.Length + 1);
-                                        productsCashList[productsCashList.Length - 1] = StorageSlotPrice[n] * ShopSlotSelectedNumber[n];
-
-                                        Array.Resize(ref productsSinglePriceList, productsSinglePriceList.Length + 1);
-                                        productsSinglePriceList[productsSinglePriceList.Length - 1] = StorageSlotPrice[n];
-                                    }
-
-                                    i = -1;
-                                    productFound = false;
-                                    foreach (string s in SoldSlotName)
-                                    {
-                                        i++;
-                                        if (StorageSlotName[n] == s && StorageSlotPrice[n] == productsSinglePriceList[n])
-                                        {
-                                            SoldSlotNumber[i] += ShopSlotSelectedNumber[n];
-                                            SoldSlotCash[i] += ShopSlotSelectedNumber[n] * StorageSlotPrice[n];
-                                            productFound = true;
-                                            break;
-                                        }
-                                    }
-                                    if (productFound == false)
-                                    {
-                                        Array.Resize(ref SoldSlotName, SoldSlotName.Length + 1);
-                                        SoldSlotName[SoldSlotName.Length - 1] = StorageSlotName[n];
-
-                                        Array.Resize(ref SoldSlotNumber, SoldSlotNumber.Length + 1);
-                                        SoldSlotNumber[SoldSlotNumber.Length - 1] = ShopSlotSelectedNumber[n];
-
-                                        Array.Resize(ref SoldSlotCash, SoldSlotCash.Length + 1);
-                                        SoldSlotCash[SoldSlotCash.Length - 1] = StorageSlotPrice[n] * ShopSlotSelectedNumber[n];
-
-                                        Array.Resize(ref SoldSlotSinglePrice, SoldSlotSinglePrice.Length + 1);
-                                        SoldSlotSinglePrice[SoldSlotSinglePrice.Length - 1] = StorageSlotPrice[n];
+                                        productsNumberList[i] -= ShopSlotSelectedNumber[n];
+                                        productsCashList[i] -= ShopSlotSelectedNumber[n] * StaticsDaySoldSlotSinglePrice[n];
+                                        break;
                                     }
                                 }
-                                catch (Exception ex)
-                                {
-                                    logWindow.NewLog($"Error in paying Purchase Slot{n} -> {ex.Message}", 2);
 
+                                i = -1;
+                                foreach (string s in StaticsDaySoldSlotName)
+                                {
+                                    i++;
+                                    if (StaticsDaySoldSlotName[n] == s && StorageSlotPrice[n] == StaticsDaySoldSlotSinglePrice[n])
+                                    {
+                                        StaticsDaySoldSlotNumber[i] -= ShopSlotSelectedNumber[n];
+                                        StaticsDaySoldSlotCash[i] -= ShopSlotSelectedNumber[n] * StaticsDaySoldSlotSinglePrice[n];
+                                        break;
+                                    }
                                 }
+
+                                StorageSlotNumber[n] += ShopSlotSelectedNumber[n];
+                                StaticsTotalSoldProducts -= ShopSlotSelectedNumber[n];
                             }
                         }
-
-                        lastPayDate = DateTime.Now.Date;
-                    }
-                    else if (shopTask == "cancel")
-                    {
-                        LoadStorage();
-                        totalGottenCash -= mainPrice;
-
-                        for (int n = 0; n < SoldSlotName.Length; n++)
+                        catch (Exception ex)
                         {
-                            try
-                            {
-                                if (ShopSlotSelectedNumber[n] != 0)
-                                {
-                                    int i = -1;
-                                    foreach (string s in productsNameList)
-                                    {
-                                        i++;
-                                        if (SoldSlotName[n] == s && StorageSlotPrice[n] == productsSinglePriceList[n])
-                                        {
-                                            productsNumberList[i] -= ShopSlotSelectedNumber[n];
-                                            productsCashList[i] -= ShopSlotSelectedNumber[n] * SoldSlotSinglePrice[n];
-                                            break;
-                                        }
-                                    }
-
-                                    i = -1;
-                                    foreach (string s in SoldSlotName)
-                                    {
-                                        i++;
-                                        if (SoldSlotName[n] == s && StorageSlotPrice[n] == SoldSlotSinglePrice[n])
-                                        {
-                                            SoldSlotNumber[i] -= ShopSlotSelectedNumber[n];
-                                            SoldSlotCash[i] -= ShopSlotSelectedNumber[n] * SoldSlotSinglePrice[n];
-                                            break;
-                                        }
-                                    }
-
-                                    StorageSlotNumber[n] += ShopSlotSelectedNumber[n];
-                                    totalSoldProducts -= ShopSlotSelectedNumber[n];
-                                }
-                            }
-                            catch (Exception ex)
-                            {
-                                logWindow.NewLog($"Error in canceling Purchase Slot{n} -> {ex.Message}", 2);
-
-                            }
+                            log.NewLog(LogWindow.LogTypes.Fehler, LogWindow.LogThread.Kasse, LogWindow.LogActions.Stornieren, $"Produkt {n + 1}: {ex.Message}", DateTime.Now, DateTime.Now - ShopSellProductStart);
                         }
                     }
-                    else if (shopTask == "complain")
-                    {
-                        LoadStorage();
+                    log.NewLog(LogWindow.LogTypes.Info, LogWindow.LogThread.Kasse, LogWindow.LogActions.Stornieren, $"Abgeschlossen", DateTime.Now, DateTime.Now - ShopSellStart);
+                }
+                else if (ShopTask == "complain")
+                {
+                    ShopSellProductStart = DateTime.Now;
+                    StorageLoader.RunWorkerAsync();
 
-                        for (int n = 0; n < SoldSlotName.Length; n++)
+                    for (int n = 0; n < StaticsDaySoldSlotName.Length; n++)
+                    {
+                        try
                         {
-                            try
-                            {
-                                LostProducts += ShopSlotSelectedNumber[n];
-                                LostCash += SoldSlotSinglePrice[n] * ShopSlotSelectedNumber[n];
-                            }
-                            catch (Exception ex)
-                            {
-                                logWindow.NewLog($"Error in complaining Purchase Slot{n} -> {ex.Message}", 2);
-
-                            }
+                            StaticsDayLostProducts += ShopSlotSelectedNumber[n];
+                            StaticsDayLostCash += StaticsDaySoldSlotSinglePrice[n] * ShopSlotSelectedNumber[n];
                         }
-
-                        totalGottenCash -= mainPrice;
-                        totalLostCash += LostCash;
-                        totalLostProducts += LostProducts;
-                    }
-                    else
-                    {
-                        MessageBox.Show("Bezahlvorgang konnte nicht definiert werden!", "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
-                        error = true;
+                        catch (Exception ex)
+                        {
+                            log.NewLog(LogWindow.LogTypes.Fehler, LogWindow.LogThread.Kasse, LogWindow.LogActions.Rücknehmen, $"Produkt {n + 1}: {ex.Message}", DateTime.Now, DateTime.Now - ShopSellProductStart);
+                        }
                     }
 
-                    if (error != true)
-                    {
-                        SaveSettings();
-                        SaveStorage();
-                        SaveTotalStatics();
-                        SaveDayStatics();
-                        Reload();
-                    }
+                    StaticsTotalGottenCash -= ShopMainPrice;
+                    StaticsTotalLostCash += StaticsDayLostCash;
+                    StaticsTotalLostProducts += StaticsDayLostProducts;
+
+                    log.NewLog(LogWindow.LogTypes.Info, LogWindow.LogThread.Kasse, LogWindow.LogActions.Rücknehmen, $"Abgeschlossen", DateTime.Now, DateTime.Now - ShopSellStart);
                 }
                 else
                 {
+                    MessageBox.Show("Bezahlvorgang konnte nicht definiert werden!", "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
+                    error = true;
+                }
 
+                if (error != true)
+                {
+                    SettingsSaver.RunWorkerAsync();
+                    StorageSaver.RunWorkerAsync();
+                    TotalStaticsSaver.RunWorkerAsync();
+                    DayStaticsSaver.RunWorkerAsync();
+                    Reload();
                 }
             }
+
             ClearShoppingCard();
-            SaveDayStatics();
-            SaveTotalStatics();
             TopBar.IsEnabled = true;
         }
 
         private void OpenShop()
         {
+            TotalStaticsLoader.RunWorkerAsync();
+            DayStaticsLoader.RunWorkerAsync();
             OpenShopToolsPanel.Visibility = Visibility.Visible;
             OpenShopStaticsPanel.Visibility = Visibility.Visible;
             ClosedShopToolsPanel.Visibility = Visibility.Collapsed;
@@ -1856,7 +1987,6 @@ namespace SellerScreen
             };
             ShopProductsGrid.IsEnabled = true;
             ShopProductsGrid.BeginAnimation(OpacityProperty, ani);
-
         }
 
         private void CloseShop()
@@ -1878,119 +2008,81 @@ namespace SellerScreen
         #endregion
 
         #region Storage
-        private void StorageSlotEditVBox_MouseDown(object sender, MouseButtonEventArgs e)
+        private short GetNewProductId()
         {
-            Viewbox vBox = sender as Viewbox;
-            short tag = short.Parse(vBox.Tag.ToString());
-
-            EditStorageSlot window = new EditStorageSlot("edit", tag)
+            short i = -1;
+            bool found = true;
+            do
             {
-                slotName = StorageSlotName[tag],
-                slotNumber = StorageSlotNumber[tag],
-                slotStatus = StorageSlotStatus[tag],
-                slotPrice = StorageSlotPrice[tag]
-            };
-            window.ShowDialog();
-
-            if (window.DialogResult == true)
-            {
-                StorageSlotName[tag] = window.slotName;
-                StorageSlotNumber[tag] = window.slotNumber;
-                StorageSlotStatus[tag] = window.slotStatus;
-                StorageSlotPrice[tag] = window.slotPrice;
-
-                if (StorageSlotNumber[tag] < 0)
+                i++;
+                if (!File.Exists(pathN.productsFile + $"{i}.xml"))
                 {
-                    StorageSlotNumber[tag] = 0;
+                    found = false;
                 }
+            } while (found);
+            return i;
+        }
 
-                SaveStorage();
-                Reload();
+        private void StorageUncheckAll()
+        {
+            StorageSelectAllSlotsChBox.IsChecked = false;
+            StorageSelectedCount = 0;
+            StorageRemoveSlotBtn.IsEnabled = false;
+            StorageActivedSlotBtn.IsEnabled = false;
+            StorageDeactivedSlotBtn.IsEnabled = false;
+
+            for (int i = 0; i < StorageSelectedArray.Length; i++)
+            {
+                StorageSelectedArray[i] = false;
             }
         }
 
-        private void StorageSlotCheckBox_Unchecked(object sender, RoutedEventArgs e)
+        private void StorageDeleteSpaces()
         {
-            if (sender is CheckBox chBox)
+            int lenght = (short)InStorageSlots.Length;
+            for (int i = 0; i < lenght; i++)
             {
-                if (StorageSelectedCount == StorageSlots)
+                if (StorageSlotName[i] == null)
                 {
-                    StorageSelectAllSlotsChBox.IsChecked = false;
-                }
-
-                StorageSelectedCount--;
-
-                if (StorageSelectedCount <= 0)
-                {
-                    StorageRemoveSlotBtn.IsEnabled = false;
-                    StorageActivedSlotBtn.IsEnabled = false;
-                    StorageDeactivedSlotBtn.IsEnabled = false;
-                }
-
-                StorageSelectedArray[int.Parse(chBox.Tag.ToString())] = false;
-                StorageSelectAllSlotsChBox.IsChecked = false;
-            }
-        }
-
-        private void StorageSlotCheckBox_Checked(object sender, RoutedEventArgs e)
-        {
-            if (sender is CheckBox chBox)
-            {
-                StorageSelectedCount++;
-
-                StorageRemoveSlotBtn.IsEnabled = true;
-                StorageActivedSlotBtn.IsEnabled = true;
-                StorageDeactivedSlotBtn.IsEnabled = true;
-
-                StorageSelectedArray[int.Parse(chBox.Tag.ToString())] = true;
-
-                if (StorageSelectedCount == StorageSlots)
-                {
-                    StorageSelectAllSlotsChBox.IsChecked = true;
-                }
-            }
-        }
-
-        private void StorageSelectAllSlotsChBox_Click(object sender, RoutedEventArgs e)
-        {
-            if (StorageSelectAllSlotsChBox.IsChecked == true)
-            {
-                StorageRemoveSlotBtn.IsEnabled = true;
-                StorageActivedSlotBtn.IsEnabled = true;
-                StorageDeactivedSlotBtn.IsEnabled = true;
-                StorageSelectedCount = StorageSlots;
-
-                for (int i = 0; i < StorageSlots; i++)
-                {
-                    StorageSelectedArray[i] = true;
-                    CheckBox chBox = (CheckBox)FindName($"StorageSlot{i}ChBox");
-                    if (chBox != null)
+                    for (int n = i; n < lenght; n++)
                     {
-                        chBox.IsChecked = true;
+                        try
+                        {
+                            StorageSlotName[n] = StorageSlotName[n + 1];
+                            StorageSlotStatus[n] = StorageSlotStatus[n + 1];
+                            StorageSlotNumber[n] = StorageSlotNumber[n + 1];
+                            StorageSlotPrice[n] = StorageSlotPrice[n + 1];
+                            InStorageSlots[n] = InStorageSlots[n + 1];
+                        }
+                        catch { }
                     }
+                    lenght--;
+                    i--;
                 }
             }
-            else
-            {
-                StorageRemoveSlotBtn.IsEnabled = false;
-                StorageActivedSlotBtn.IsEnabled = false;
-                StorageDeactivedSlotBtn.IsEnabled = false;
-                StorageUncheckAll();
 
-                for (int i = 0; i < StorageSlots; i++)
-                {
-                    CheckBox chBox = (CheckBox)FindName($"StorageSlot{i}ChBox");
-                    if (chBox != null)
-                    {
-                        chBox.IsChecked = false;
-                    }
-                }
-            }
+            Array.Resize(ref StorageSlotName, lenght);
+            Array.Resize(ref StorageSlotStatus, lenght);
+            Array.Resize(ref StorageSlotNumber, lenght);
+            Array.Resize(ref StorageSlotPrice, lenght);
+            Array.Resize(ref InStorageSlots, lenght);
         }
 
-        private void BuildStorage(WindowsTheme theme)
+        private bool IsStorageSlotError(int i)
         {
-            if (StorageSlots == 0)
+            bool error = false;
+            if (string.IsNullOrWhiteSpace(StorageSlotName[i]) || StorageSlotNumber[i] == 0 || StorageSlotPrice[i] == 0)
+            {
+                error = true;
+            }
+            return error;
+        }
+
+        private void StorageBuilder()
+        {
+            StorageBuildStart = DateTime.Now;
+            MainProgBarShow();
+            if (InStorageSlots.Length == 0)
             {
                 StorageNoProductsFoundLbl.Visibility = Visibility.Visible;
                 StorageProductsGrid.Visibility = Visibility.Collapsed;
@@ -1999,7 +2091,6 @@ namespace SellerScreen
             {
                 StorageNoProductsFoundLbl.Visibility = Visibility.Collapsed;
                 StorageProductsGrid.Visibility = Visibility.Visible;
-
                 try
                 {
                     StorageSlotsPanel.Children.Clear();
@@ -2007,7 +2098,7 @@ namespace SellerScreen
                     StringReader stringReader;
                     XmlReader xmlReader;
 
-                    for (short i = 0; i < StorageSlots; i++)
+                    for (short i = 0; i < InStorageSlots.Length; i++)
                     {
                         CheckBox chBox = new CheckBox()
                         {
@@ -2144,10 +2235,14 @@ namespace SellerScreen
                         }
                         else
                         {
-                            if (theme == WindowsTheme.Light)
+                            if (Theme == AppTheme.Light)
+                            {
                                 slotScp.Background = Brushes.LightGray;
+                            }
                             else
+                            {
                                 slotScp.Background = (Brush)new BrushConverter().ConvertFrom("#FF555555");
+                            }
                         }
 
                         slotScp.MouseEnter += new MouseEventHandler(SlotItemMouseEnter);
@@ -2160,7 +2255,6 @@ namespace SellerScreen
                         slotScp.Children.Add(priceLbl);
                         slotScp.Children.Add(optionsVBox);
                         StorageSlotsPanel.Children.Add(slotScp);
-                        StorageSlotsPanel.UpdateLayout();
 
                         try
                         {
@@ -2212,21 +2306,25 @@ namespace SellerScreen
                         RegisterName(optionsVBox.Name, optionsVBox);
                         RegisterName(slotScp.Name, slotScp);
 
-                        Array.Resize(ref StorageSelectedArray, StorageSlots);
+                        Array.Resize(ref StorageSelectedArray, InStorageSlots.Length);
                         StorageUncheckAll();
                     }
-                    logWindow.NewLog($"Building Storage successful", 1);
+                    log.NewLog(LogWindow.LogTypes.Erfolg, LogWindow.LogThread.Lager, LogWindow.LogActions.Bauen, null, DateTime.Now, DateTime.Now - StorageBuildStart);
+                    NewMsgItem(LogWindow.LogTypes.Erfolg, LogWindow.LogThread.Lager, "Bauen des Lagers erfolgreich!", null);
                 }
                 catch (Exception ex)
                 {
-                    logWindow.NewLog($"Building Storage failed! {ex.Message}", 2);
-
+                    log.NewLog(LogWindow.LogTypes.Fehler, LogWindow.LogThread.Lager, LogWindow.LogActions.Bauen, ex.Message, DateTime.Now, DateTime.Now - StorageBuildStart);
+                    NewMsgItem(LogWindow.LogTypes.Fehler, LogWindow.LogThread.Lager, "Bauen des Lagers fehlgeschlagen!", ex.Message);
                 }
             }
+            MainProgBarHide();
         }
 
-        private void LoadStorage()
+        private void StorageLoaderRun(object sender, DoWorkEventArgs e)
         {
+            StorageLoaderStart = DateTime.Now;
+            string errors = "";
             try
             {
                 StorageData stoL = StorageData.Load();
@@ -2238,143 +2336,192 @@ namespace SellerScreen
 
                 try
                 {
-                    StorageSlots = stoL.StorageSlots;
+                    InStorageSlots = stoL.InStorageSlots;
 
-                    for (int i = 0; i < StorageSlots; i++)
+                    foreach (short i in InStorageSlots)
                     {
+                        ProductsData proL = ProductsData.Load(i);
+
                         try
                         {
                             Array.Resize(ref StorageSlotName, StorageSlotName.Length + 1);
-                            StorageSlotName[StorageSlotName.Length - 1] = stoL.StorageSlotName[i];
+                            StorageSlotName[StorageSlotName.Length - 1] = proL.ProductName;
                         }
                         catch (Exception ex)
                         {
-                            logWindow.NewLog($"Error in Loading Storage/StorageSlotName{i} -> {ex.Message}", 2);
-
+                            errors += $"\nProdukt {i}, Name, {ex.Message}";
                         }
+
                         try
                         {
                             Array.Resize(ref StorageSlotNumber, StorageSlotNumber.Length + 1);
-                            StorageSlotNumber[StorageSlotNumber.Length - 1] = stoL.StorageSlotNumber[i];
+                            StorageSlotNumber[StorageSlotNumber.Length - 1] = proL.ProductNumber;
                         }
                         catch (Exception ex)
                         {
-                            logWindow.NewLog($"Error in Loading Storage/StorageSlotNumber{i} -> {ex.Message}", 2);
-
+                            errors += $"\nProdukt {i}, Anzahl, {ex.Message}";
                         }
+
                         try
                         {
                             Array.Resize(ref StorageSlotPrice, StorageSlotPrice.Length + 1);
-                            StorageSlotPrice[StorageSlotPrice.Length - 1] = stoL.StorageSlotPrice[i];
+                            StorageSlotPrice[StorageSlotPrice.Length - 1] = proL.ProductPrice;
                         }
                         catch (Exception ex)
                         {
-                            logWindow.NewLog($"Error in Loading Storage/StorageSlotPrice{i} -> {ex.Message}", 2);
-
+                            errors += $"\nProdukt {i}, Preis, {ex.Message}";
                         }
+
                         try
                         {
                             Array.Resize(ref StorageSlotStatus, StorageSlotStatus.Length + 1);
-                            StorageSlotStatus[StorageSlotStatus.Length - 1] = stoL.StorageSlotStatus[i];
+                            StorageSlotStatus[StorageSlotStatus.Length - 1] = proL.ProductStatus;
                         }
                         catch (Exception ex)
                         {
-                            logWindow.NewLog($"Error in Loading Storage/StorageSlotStatus{i} -> {ex.Message}", 2);
-
+                            errors += $"\nProdukt {i}, Status, {ex.Message}";
                         }
                     }
                 }
                 catch (Exception ex)
                 {
-                    logWindow.NewLog($"Error in Loading Storage/StorageSlots -> {ex.Message}", 2);
-
+                    errors += $"\nLagerinhalt, {ex.Message}";
                 }
-
-                logWindow.NewLog($"Loading Storage successful", 1);
             }
             catch (Exception ex)
             {
-                logWindow.NewLog($"Loading Storage failed! {ex.Message}", 2);
-
+                errors += $"\nLager laden, {ex.Message}";
             }
+
+            e.Result = errors;
         }
 
-        private void SaveStorage()
+        private void StorageLoaderProgress(object sender, ProgressChangedEventArgs e)
         {
+            MainProgBarShow();
+        }
+
+        private void StorageLoadComplete(object sender, RunWorkerCompletedEventArgs e)
+        {
+            string errors = (string)e.Result;
+
+            if (e.Cancelled)
+            {
+                log.NewLog(LogWindow.LogTypes.Warnung, LogWindow.LogThread.Lager, LogWindow.LogActions.Laden, "Abgebrochen", DateTime.Now, DateTime.Now - StorageLoaderStart);
+                NewMsgItem(LogWindow.LogTypes.Warnung, LogWindow.LogThread.Lager, "Laden des Lagers abgebrochen!", null);
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty(errors))
+                {
+                    log.NewLog(LogWindow.LogTypes.Fehler, LogWindow.LogThread.Lager, LogWindow.LogActions.Laden, errors, DateTime.Now, DateTime.Now - StorageLoaderStart);
+                    NewMsgItem(LogWindow.LogTypes.Fehler, LogWindow.LogThread.Lager, "Laden des Lagers fehlerhaft!", "Siehe Log");
+                }
+                else
+                {
+                    log.NewLog(LogWindow.LogTypes.Erfolg, LogWindow.LogThread.Lager, LogWindow.LogActions.Laden, null, DateTime.Now, DateTime.Now - StorageLoaderStart);
+                    NewMsgItem(LogWindow.LogTypes.Erfolg, LogWindow.LogThread.Lager, "Laden des Lagers erfolgreich!", null);
+                }
+            }
+            MainProgBarHide();
+            StorageBuilder();
+            BuildShop(AppThemeStr, "storage");
+        }
+
+        private void StorageSaverProgress(object sender, ProgressChangedEventArgs e)
+        {
+            MainProgBarShow();
+        }
+
+        private void StorageSaverComplete(object sender, RunWorkerCompletedEventArgs e)
+        {
+            string errors = (string)e.Result;
+
+            if (e.Cancelled)
+            {
+                log.NewLog(LogWindow.LogTypes.Warnung, LogWindow.LogThread.Lager, LogWindow.LogActions.Speichern, "Abgebrochen", DateTime.Now, DateTime.Now - StorageSaverStart);
+                NewMsgItem(LogWindow.LogTypes.Warnung, LogWindow.LogThread.Lager, "Speichern des Lagers abgebrochen!", null);
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty(errors))
+                {
+                    log.NewLog(LogWindow.LogTypes.Fehler, LogWindow.LogThread.Lager, LogWindow.LogActions.Speichern, errors, DateTime.Now, DateTime.Now - StorageSaverStart);
+                    NewMsgItem(LogWindow.LogTypes.Fehler, LogWindow.LogThread.Lager, "Speichern des Lagers fehlerhaft!", "Siehe Log");
+                }
+                else
+                {
+                    log.NewLog(LogWindow.LogTypes.Erfolg, LogWindow.LogThread.Lager, LogWindow.LogActions.Speichern, null, DateTime.Now, DateTime.Now - StorageSaverStart);
+                    NewMsgItem(LogWindow.LogTypes.Erfolg, LogWindow.LogThread.Lager, "Speichern des Lagers erfolgreich!", null);
+                }
+            }
+
+            MainProgBarHide();
+        }
+
+        private void StorageStorageSaverRun(object sender, DoWorkEventArgs e)
+        {
+            StorageSaverStart = DateTime.Now;
+            string errors = "";
 
             StorageData stoS = new StorageData();
+            ProductsData proS = new ProductsData();
 
-            Array.Clear(stoS.StorageSlotName, 0, stoS.StorageSlotName.Length);
-            Array.Clear(stoS.StorageSlotStatus, 0, stoS.StorageSlotStatus.Length);
-            Array.Clear(stoS.StorageSlotNumber, 0, stoS.StorageSlotNumber.Length);
-            Array.Clear(stoS.StorageSlotPrice, 0, stoS.StorageSlotPrice.Length);
-
-            try
-            {
-                stoS.StorageSlots = StorageSlots;
-            }
-            catch (Exception ex)
-            {
-                logWindow.NewLog($"Error in Saving Storage/StorageSlots -> {ex.Message}", 2);
-
-            }
-
-
-            for (int i = 0; i < StorageSlots; i++)
+            foreach (short i in InStorageSlots)
             {
                 try
                 {
-                    Array.Resize(ref stoS.StorageSlotName, stoS.StorageSlotName.Length + 1);
-                    stoS.StorageSlotName[stoS.StorageSlotName.Length - 1] = StorageSlotName[i];
+                    proS.ProductName = StorageSlotName[i];
                 }
                 catch (Exception ex)
                 {
-                    logWindow.NewLog($"Error in Saving Storage/StorageSlotName{i} -> {ex.Message}", 2);
-
+                    errors += $"\nProdukt {i}, Name, {ex.Message}";
                 }
                 try
                 {
-                    Array.Resize(ref stoS.StorageSlotNumber, stoS.StorageSlotNumber.Length + 1);
-                    stoS.StorageSlotNumber[stoS.StorageSlotNumber.Length - 1] = StorageSlotNumber[i];
+                    proS.ProductNumber = StorageSlotNumber[i];
                 }
                 catch (Exception ex)
                 {
-                    logWindow.NewLog($"Error in Saving Storage/StorageSlotNumber{i} -> {ex.Message}", 2);
-
+                    errors += $"\nProdukt {i}, Anzahl, {ex.Message}";
                 }
                 try
                 {
-                    Array.Resize(ref stoS.StorageSlotPrice, stoS.StorageSlotPrice.Length + 1);
-                    stoS.StorageSlotPrice[stoS.StorageSlotPrice.Length - 1] = StorageSlotPrice[i];
+                    proS.ProductPrice = StorageSlotPrice[i];
                 }
                 catch (Exception ex)
                 {
-                    logWindow.NewLog($"Error in Saving Storage/StorageSlotPrice{i} -> {ex.Message}", 2);
-
+                    errors += $"\nProdukt {i}, Preis, {ex.Message}";
                 }
                 try
                 {
-                    Array.Resize(ref stoS.StorageSlotStatus, stoS.StorageSlotStatus.Length + 1);
-                    stoS.StorageSlotStatus[stoS.StorageSlotStatus.Length - 1] = StorageSlotStatus[i];
+                    proS.ProductStatus = StorageSlotStatus[i];
                 }
                 catch (Exception ex)
                 {
-                    logWindow.NewLog($"Error in Saving Storage/StorageSlotStatus{i} -> {ex.Message}", 2);
-
+                    errors += $"\nProdukt {i}, Status, {ex.Message}";
+                }
+                try
+                {
+                    proS.Save(i);
+                }
+                catch (Exception ex)
+                {
+                    errors += $"\nProdukt {i}, Speichern, {ex.Message}";
                 }
             }
 
             try
             {
+                stoS.InStorageSlots = InStorageSlots;
                 stoS.Save();
-                logWindow.NewLog($"Saving Storage successful", 1);
             }
             catch (Exception ex)
             {
-                logWindow.NewLog($"Saving Storage failed! {ex.Message}", 2);
-
+                errors += $"\nLager, Speichern, {ex.Message}";
             }
 
+            e.Result = errors;
         }
 
         private void StorageAddSlotBtn_Click(object sender, RoutedEventArgs e)
@@ -2396,14 +2543,16 @@ namespace SellerScreen
                 Array.Resize(ref StorageSlotPrice, StorageSlotPrice.Length + 1);
                 StorageSlotPrice[StorageSlotPrice.Length - 1] = window.slotPrice;
 
-                StorageSlots++;
-                Array.Resize(ref StorageSelectedArray, StorageSlots);
+                Array.Resize(ref InStorageSlots, InStorageSlots.Length + 1);
+                InStorageSlots[InStorageSlots.Length - 1] = GetNewProductId();
+
+                Array.Resize(ref StorageSelectedArray, InStorageSlots.Length);
 
                 StorageUncheckAll();
 
-                SaveStorage();
-                LoadStorage();
-                BuildStorage(GetWindowsTheme());
+                StorageSaver.RunWorkerAsync();
+                StorageLoader.RunWorkerAsync();
+                StorageBuilder();
             }
         }
 
@@ -2411,7 +2560,7 @@ namespace SellerScreen
         {
             if (MessageBox.Show("Möchten Sie die ausgewählten Produktplätze wirklich löschen?\nDiese Aktion kann nicht rückgängig gemacht werden!", "Produktplätze löschen", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
             {
-                for (int i = 0; i < StorageSlots; i++)
+                for (int i = 0; i < InStorageSlots.Length; i++)
                 {
                     if (StorageSelectedArray[i] == true)
                     {
@@ -2424,9 +2573,9 @@ namespace SellerScreen
 
                 StorageUncheckAll();
                 StorageDeleteSpaces();
-                SaveStorage();
-                LoadStorage();
-                BuildStorage(GetWindowsTheme());
+                StorageSaver.RunWorkerAsync();
+                StorageLoader.RunWorkerAsync();
+                StorageBuilder();
             }
         }
 
@@ -2434,7 +2583,7 @@ namespace SellerScreen
         {
             if (MessageBox.Show("Möchten Sie die ausgewählten Produktplätze wirklich aktivieren?", "Produktplätze aktivieren", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
             {
-                for (int i = 0; i < StorageSlots; i++)
+                for (int i = 0; i < InStorageSlots.Length; i++)
                 {
                     if (StorageSelectedArray[i] == true)
                     {
@@ -2458,9 +2607,9 @@ namespace SellerScreen
                 }
                 StorageUncheckAll();
 
-                SaveStorage();
-                LoadStorage();
-                BuildStorage(GetWindowsTheme());
+                StorageSaver.RunWorkerAsync();
+                StorageLoader.RunWorkerAsync();
+                StorageBuilder();
             }
         }
 
@@ -2468,7 +2617,7 @@ namespace SellerScreen
         {
             if (MessageBox.Show("Möchten Sie die ausgewählten Produktplätze wirklich deaktivieren?", "Produktplätze deaktivieren", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
             {
-                for (int i = 0; i < StorageSlots; i++)
+                for (int i = 0; i < InStorageSlots.Length; i++)
                 {
                     if (StorageSelectedArray[i] == true)
                     {
@@ -2477,63 +2626,122 @@ namespace SellerScreen
                 }
                 StorageUncheckAll();
 
-                SaveStorage();
-                LoadStorage();
-                BuildStorage(GetWindowsTheme());
+                StorageSaver.RunWorkerAsync();
+                StorageLoader.RunWorkerAsync();
+                StorageBuilder();
             }
         }
 
-        private void StorageUncheckAll()
+        private void StorageSlotEditVBox_MouseDown(object sender, MouseButtonEventArgs e)
         {
-            StorageSelectAllSlotsChBox.IsChecked = false;
-            StorageSelectedCount = 0;
-            StorageRemoveSlotBtn.IsEnabled = false;
-            StorageActivedSlotBtn.IsEnabled = false;
-            StorageDeactivedSlotBtn.IsEnabled = false;
+            Viewbox vBox = sender as Viewbox;
+            short tag = short.Parse(vBox.Tag.ToString());
 
-            for (int i = 0; i < StorageSlots; i++)
+            EditStorageSlot window = new EditStorageSlot("edit", tag)
             {
-                StorageSelectedArray[i] = false;
-            }
-        }
+                slotName = StorageSlotName[tag],
+                slotNumber = StorageSlotNumber[tag],
+                slotStatus = StorageSlotStatus[tag],
+                slotPrice = StorageSlotPrice[tag]
+            };
+            window.ShowDialog();
 
-        private void StorageDeleteSpaces()
-        {
-            for (int i = 0; i < StorageSlots; i++)
+            if (window.DialogResult == true)
             {
-                if (StorageSlotName[i] == null)
+                StorageSlotName[tag] = window.slotName;
+                StorageSlotNumber[tag] = window.slotNumber;
+                StorageSlotStatus[tag] = window.slotStatus;
+                StorageSlotPrice[tag] = window.slotPrice;
+
+                if (StorageSlotNumber[tag] < 0)
                 {
-                    for (int n = i; n < StorageSlots; n++)
-                    {
-                        try
-                        {
-                            StorageSlotName[n] = StorageSlotName[n + 1];
-                            StorageSlotStatus[n] = StorageSlotStatus[n + 1];
-                            StorageSlotNumber[n] = StorageSlotNumber[n + 1];
-                            StorageSlotPrice[n] = StorageSlotPrice[n + 1];
-                        }
-                        catch { }
-                    }
-                    StorageSlots--;
-                    i--;
+                    StorageSlotNumber[tag] = 0;
+                }
+
+                StorageSaver.RunWorkerAsync();
+                Reload();
+            }
+        }
+
+        private void StorageSlotCheckBox_Unchecked(object sender, RoutedEventArgs e)
+        {
+            if (sender is CheckBox chBox)
+            {
+                if (StorageSelectedCount == InStorageSlots.Length)
+                {
+                    StorageSelectAllSlotsChBox.IsChecked = false;
+                }
+
+                StorageSelectedCount--;
+
+                if (StorageSelectedCount <= 0)
+                {
+                    StorageRemoveSlotBtn.IsEnabled = false;
+                    StorageActivedSlotBtn.IsEnabled = false;
+                    StorageDeactivedSlotBtn.IsEnabled = false;
+                }
+
+                StorageSelectedArray[int.Parse(chBox.Tag.ToString())] = false;
+                StorageSelectAllSlotsChBox.IsChecked = false;
+            }
+        }
+
+        private void StorageSlotCheckBox_Checked(object sender, RoutedEventArgs e)
+        {
+            if (sender is CheckBox chBox)
+            {
+                StorageSelectedCount++;
+
+                StorageRemoveSlotBtn.IsEnabled = true;
+                StorageActivedSlotBtn.IsEnabled = true;
+                StorageDeactivedSlotBtn.IsEnabled = true;
+
+                StorageSelectedArray[int.Parse(chBox.Tag.ToString())] = true;
+
+                if (StorageSelectedCount == InStorageSlots.Length)
+                {
+                    StorageSelectAllSlotsChBox.IsChecked = true;
                 }
             }
-
-            Array.Resize(ref StorageSlotName, StorageSlots);
-            Array.Resize(ref StorageSlotStatus, StorageSlots);
-            Array.Resize(ref StorageSlotNumber, StorageSlots);
-            Array.Resize(ref StorageSlotPrice, StorageSlots);
         }
 
-        private bool IsStorageSlotError(int i)
+        private void StorageSelectAllSlotsChBox_Click(object sender, RoutedEventArgs e)
         {
-            bool error = false;
-            if (string.IsNullOrWhiteSpace(StorageSlotName[i]) || StorageSlotNumber[i] == 0 || StorageSlotPrice[i] == 0)
+            if (StorageSelectAllSlotsChBox.IsChecked == true)
             {
-                error = true;
+                StorageRemoveSlotBtn.IsEnabled = true;
+                StorageActivedSlotBtn.IsEnabled = true;
+                StorageDeactivedSlotBtn.IsEnabled = true;
+                StorageSelectedCount = short.Parse(InStorageSlots.Length.ToString());
+
+                for (int i = 0; i < InStorageSlots.Length; i++)
+                {
+                    StorageSelectedArray[i] = true;
+                    CheckBox chBox = (CheckBox)FindName($"StorageSlot{i}ChBox");
+                    if (chBox != null)
+                    {
+                        chBox.IsChecked = true;
+                    }
+                }
             }
-            return error;
+            else
+            {
+                StorageRemoveSlotBtn.IsEnabled = false;
+                StorageActivedSlotBtn.IsEnabled = false;
+                StorageDeactivedSlotBtn.IsEnabled = false;
+                StorageUncheckAll();
+
+                for (int i = 0; i < InStorageSlots.Length; i++)
+                {
+                    CheckBox chBox = (CheckBox)FindName($"StorageSlot{i}ChBox");
+                    if (chBox != null)
+                    {
+                        chBox.IsChecked = false;
+                    }
+                }
+            }
         }
+
         #endregion
 
         #region PcTime
@@ -2550,152 +2758,220 @@ namespace SellerScreen
         #endregion
 
         #region Statics
-        private void SaveTotalStatics()
+        private void DayStaticsSaverProgress(object sender, ProgressChangedEventArgs e)
         {
-            for (int i = 0; i < productsNumberList.Length; i++)
+            MainProgBarShow();
+        }
+
+        private void DayStaticsSaverComplete(object sender, RunWorkerCompletedEventArgs e)
+        {
+            string error = (string)e.Result;
+
+            if (e.Cancelled)
             {
-                if (productsNumberList[i] > mostSoldProductsNumber[0])
+                log.NewLog(LogWindow.LogTypes.Warnung, LogWindow.LogThread.Tagesstatistiken, LogWindow.LogActions.Speichern, "Abgebrochen", DateTime.Now, DateTime.Now - StorageSaverStart);
+                NewMsgItem(LogWindow.LogTypes.Warnung, LogWindow.LogThread.Tagesstatistiken, "Speichern der Tagesstatistiken abgebrochen!", null);
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty(error))
                 {
-                    mostSoldProductsNumber[4] = mostSoldProductsNumber[3];
-                    mostSoldProductsNumber[3] = mostSoldProductsNumber[2];
-                    mostSoldProductsNumber[2] = mostSoldProductsNumber[1];
-                    mostSoldProductsNumber[1] = mostSoldProductsNumber[0];
-                    mostSoldProductsNumber[0] = productsNumberList[i];
-
-                    mostSoldProductsName[4] = mostSoldProductsName[3];
-                    mostSoldProductsName[3] = mostSoldProductsName[2];
-                    mostSoldProductsName[2] = mostSoldProductsName[1];
-                    mostSoldProductsName[1] = mostSoldProductsName[0];
-                    mostSoldProductsName[0] = productsNameList[i];
+                    log.NewLog(LogWindow.LogTypes.Fehler, LogWindow.LogThread.Tagesstatistiken, LogWindow.LogActions.Speichern, error, DateTime.Now, DateTime.Now - StorageSaverStart);
+                    NewMsgItem(LogWindow.LogTypes.Fehler, LogWindow.LogThread.Tagesstatistiken, "Speichern der Tagesstatistiken fehlerhaft!", "Siehe Log");
                 }
-                else if (productsNumberList[i] > mostSoldProductsNumber[1])
+                else
                 {
-                    mostSoldProductsNumber[4] = mostSoldProductsNumber[3];
-                    mostSoldProductsNumber[3] = mostSoldProductsNumber[2];
-                    mostSoldProductsNumber[2] = mostSoldProductsNumber[1];
-                    mostSoldProductsNumber[1] = productsNumberList[i];
-
-                    mostSoldProductsName[4] = mostSoldProductsName[3];
-                    mostSoldProductsName[3] = mostSoldProductsName[2];
-                    mostSoldProductsName[2] = mostSoldProductsName[1];
-                    mostSoldProductsName[1] = productsNameList[i];
-                }
-                else if (productsNumberList[i] > mostSoldProductsNumber[2])
-                {
-                    mostSoldProductsNumber[4] = mostSoldProductsNumber[3];
-                    mostSoldProductsNumber[3] = mostSoldProductsNumber[2];
-                    mostSoldProductsNumber[2] = productsNumberList[i];
-
-                    mostSoldProductsName[4] = mostSoldProductsName[3];
-                    mostSoldProductsName[3] = mostSoldProductsName[2];
-                    mostSoldProductsName[2] = productsNameList[i];
-                }
-                else if (productsNumberList[i] > mostSoldProductsNumber[3])
-                {
-                    mostSoldProductsNumber[4] = mostSoldProductsNumber[3];
-                    mostSoldProductsNumber[3] = productsNumberList[i];
-
-                    mostSoldProductsName[4] = mostSoldProductsName[3];
-                    mostSoldProductsName[3] = productsNameList[i];
-                }
-                else if (productsNumberList[i] > mostSoldProductsNumber[4])
-                {
-                    mostSoldProductsNumber[4] = productsNumberList[i];
-
-                    mostSoldProductsName[4] = productsNameList[i];
+                    log.NewLog(LogWindow.LogTypes.Erfolg, LogWindow.LogThread.Tagesstatistiken, LogWindow.LogActions.Speichern, null, DateTime.Now, DateTime.Now - StorageSaverStart);
+                    NewMsgItem(LogWindow.LogTypes.Erfolg, LogWindow.LogThread.Tagesstatistiken, "Speichern der Tagesstatistiken erfolgreich!", null);
                 }
             }
 
-            for (int i = 0; i < productsCashList.Length; i++)
-            {
-                if (productsCashList[i] > highestEarningsProductsNumber[0])
-                {
-                    highestEarningsProductsNumber[4] = highestEarningsProductsNumber[3];
-                    highestEarningsProductsNumber[3] = highestEarningsProductsNumber[2];
-                    highestEarningsProductsNumber[2] = highestEarningsProductsNumber[1];
-                    highestEarningsProductsNumber[1] = highestEarningsProductsNumber[0];
-                    highestEarningsProductsNumber[0] = productsCashList[i];
+            MainProgBarHide();
+        }
 
-                    highestEarningsProductsName[4] = highestEarningsProductsName[3];
-                    highestEarningsProductsName[3] = highestEarningsProductsName[2];
-                    highestEarningsProductsName[2] = highestEarningsProductsName[1];
-                    highestEarningsProductsName[1] = highestEarningsProductsName[0];
-                    highestEarningsProductsName[0] = productsNameList[i];
-                }
-                else if (productsCashList[i] > highestEarningsProductsNumber[1])
-                {
-                    highestEarningsProductsNumber[4] = highestEarningsProductsNumber[3];
-                    highestEarningsProductsNumber[3] = highestEarningsProductsNumber[2];
-                    highestEarningsProductsNumber[2] = highestEarningsProductsNumber[1];
-                    highestEarningsProductsNumber[1] = productsNumberList[i];
-
-                    highestEarningsProductsName[4] = highestEarningsProductsName[3];
-                    highestEarningsProductsName[3] = highestEarningsProductsName[2];
-                    highestEarningsProductsName[2] = highestEarningsProductsName[1];
-                    highestEarningsProductsName[1] = productsNameList[i];
-                }
-                else if (productsCashList[i] > highestEarningsProductsNumber[2])
-                {
-                    highestEarningsProductsNumber[4] = highestEarningsProductsNumber[3];
-                    highestEarningsProductsNumber[3] = highestEarningsProductsNumber[2];
-                    highestEarningsProductsNumber[2] = productsNumberList[i];
-
-                    highestEarningsProductsName[4] = highestEarningsProductsName[3];
-                    highestEarningsProductsName[3] = highestEarningsProductsName[2];
-                    highestEarningsProductsName[2] = productsNameList[i];
-                }
-                else if (productsCashList[i] > highestEarningsProductsNumber[3])
-                {
-                    highestEarningsProductsNumber[4] = highestEarningsProductsNumber[3];
-                    highestEarningsProductsNumber[3] = productsNumberList[i];
-
-                    highestEarningsProductsName[4] = highestEarningsProductsName[3];
-                    highestEarningsProductsName[3] = productsNameList[i];
-                }
-                else if (productsCashList[i] > highestEarningsProductsNumber[4])
-                {
-                    highestEarningsProductsNumber[4] = productsNumberList[i];
-
-                    highestEarningsProductsName[4] = productsNameList[i];
-                }
-            }
-
-            StaticsTotalData staTS = new StaticsTotalData
-            {
-                startDate = startDate,
-                totalCustomers = totalCustomers,
-                totalSoldProducts = totalSoldProducts,
-                totalGottenCash = totalGottenCash,
-                totalLostCash = totalLostCash,
-                totalLostProducts = totalLostProducts,
-                productsNameList = productsNameList,
-                productsNumberList = productsNumberList,
-                productsCashList = productsCashList,
-                productsSinglePriceList = productsSinglePriceList,
-                totalPcTime = totalPcTime,
-                totalPcUsers = totalPcUsers,
-                mostSoldProductsName = mostSoldProductsName,
-                mostSoldProductsNumber = mostSoldProductsNumber,
-                mostSoldProductsSinglePrice = mostSoldProductsSinglePrice,
-                highestEarningsProductsName = highestEarningsProductsName,
-                highestEarningsProductsNumber = highestEarningsProductsNumber,
-                highestEarningsProductsSinglePrice = highestEarningsProductsSinglePrice
-            };
-
+        private void DayStaticsSaverRun(object sender, DoWorkEventArgs e)
+        {
             try
             {
-                staTS.Save();
-                logWindow.NewLog($"Saving StaticsData/Total successful", 1);
+                StaticsDayData staDS = new StaticsDayData
+                {
+                    StaticsDaySoldSlotCash = StaticsDaySoldSlotCash,
+                    StaticsDaySoldSlotNumber = StaticsDaySoldSlotNumber,
+                    StaticsDaySoldSlotName = StaticsDaySoldSlotName,
+                    StaticsDaySoldSlotSinglePrice = StaticsDaySoldSlotSinglePrice,
+                    StaticsDayLostCash = StaticsDayLostCash,
+                    StaticsDayLostProducts = StaticsDayLostProducts,
+                    StaticsDayPcUsage = StaticsDayPcUsage,
+                    StaticsDayPcUsers = StaticsDayPcUsers,
+                    StaticsDayPcName = StaticsDayPcName
+                };
+                staDS.Save();
             }
             catch (Exception ex)
             {
-                logWindow.NewLog($"Saving StaticsData/Total failed! {ex.Message}", 2);
+                e.Result = ex.Message;
             }
         }
 
-        private void LoadTotalStatics()
+        private void DayStaticsLoaderProgress(object sender, ProgressChangedEventArgs e)
         {
-            loadTotalStaticsError = false;
+            MainProgBarShow();
+        }
+
+        private void DayStaticsLoaderComplete(object sender, RunWorkerCompletedEventArgs e)
+        {
+            string error = (string)e.Result;
+
+            if (e.Cancelled)
+            {
+                log.NewLog(LogWindow.LogTypes.Warnung, LogWindow.LogThread.Tagesstatistiken, LogWindow.LogActions.Laden, "Abgebrochen", DateTime.Now, DateTime.Now - DayStaticsLoadStart);
+                NewMsgItem(LogWindow.LogTypes.Warnung, LogWindow.LogThread.Tagesstatistiken, "Laden der Tagesstatistiken abgebrochen!", null);
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty(error))
+                {
+                    log.NewLog(LogWindow.LogTypes.Fehler, LogWindow.LogThread.Tagesstatistiken, LogWindow.LogActions.Laden, error, DateTime.Now, DateTime.Now - DayStaticsLoadStart);
+                    NewMsgItem(LogWindow.LogTypes.Fehler, LogWindow.LogThread.Tagesstatistiken, "Laden der Tagesstatistiken fehlerhaft!", "Siehe Log");
+                }
+                else
+                {
+                    log.NewLog(LogWindow.LogTypes.Erfolg, LogWindow.LogThread.Tagesstatistiken, LogWindow.LogActions.Laden, null, DateTime.Now, DateTime.Now - DayStaticsLoadStart);
+                    NewMsgItem(LogWindow.LogTypes.Erfolg, LogWindow.LogThread.Tagesstatistiken, "Laden der Tagesstatistiken erfolgreich!", null);
+                }
+            }
+
+            MainProgBarHide();
+            BuildDayStatics();
+        }
+
+        private void DayStaticsLoaderRun(object sender, DoWorkEventArgs e)
+        {
+            DayStaticsLoadStart = DateTime.Now;
+            DateTime date = (DateTime)e.Argument;
+            string errors = "";
+
+            try
+            {
+                StaticsDayData staDL = StaticsDayData.Load(date.Date);
+
+                try
+                {
+                    StaticsDaySoldSlotCash = staDL.StaticsDaySoldSlotCash;
+                }
+                catch (Exception ex)
+                {
+                    errors += $"\nProdukt, Einnahmen, {ex.Message}";
+                }
+                try
+                {
+                    StaticsDaySoldSlotNumber = staDL.StaticsDaySoldSlotNumber;
+                }
+                catch (Exception ex)
+                {
+                    errors += $"\nProdukt, Anzahl, {ex.Message}";
+                }
+                try
+                {
+                    StaticsDaySoldSlotName = staDL.StaticsDaySoldSlotName;
+                }
+                catch (Exception ex)
+                {
+                    errors += $"\nProdukt, Name, {ex.Message}";
+                }
+                try
+                {
+                    StaticsDaySoldSlotSinglePrice = staDL.StaticsDaySoldSlotSinglePrice;
+                }
+                catch (Exception ex)
+                {
+                    errors += $"\nProdukt, Einzelpreis, {ex.Message}";
+                }
+                try
+                {
+                    StaticsDayLostCash = staDL.StaticsDayLostCash;
+                }
+                catch (Exception ex)
+                {
+                    errors += $"\nVerluste, {ex.Message}";
+                }
+                try
+                {
+                    StaticsDayLostProducts = staDL.StaticsDayLostProducts;
+                }
+                catch (Exception ex)
+                {
+                    errors += $"\nRücknahmen, {ex.Message}";
+                }
+                try
+                {
+                    StaticsDayPcUsage = staDL.StaticsDayPcUsage;
+                }
+                catch (Exception ex)
+                {
+                    errors += $"\nPCs, Benutzung, {ex.Message}";
+                }
+                try
+                {
+                    StaticsDayPcUsers = staDL.StaticsDayPcUsers;
+                }
+                catch (Exception ex)
+                {
+                    errors += $"\nPCs, Benutzer, {ex.Message}";
+                }
+                try
+                {
+                    StaticsDayPcName = staDL.StaticsDayPcName;
+                }
+                catch (Exception ex)
+                {
+                    errors += $"\nPCs, Name, {ex.Message}";
+                }
+            }
+            catch (Exception ex)
+            {
+                errors += $"\nLaden, {ex.Message}";
+            }
+
+            e.Result = errors;
+        }
+
+        private void TotalStaticsLoaderProgress(object sender, ProgressChangedEventArgs e)
+        {
+            MainProgBarShow();
+        }
+
+        private void TotalStaticsLoaderComplete(object sender, RunWorkerCompletedEventArgs e)
+        {
+            string error = (string)e.Result;
+
+            if (e.Cancelled)
+            {
+                log.NewLog(LogWindow.LogTypes.Warnung, LogWindow.LogThread.Gesamtstatistiken, LogWindow.LogActions.Laden, "Abgebrochen", DateTime.Now, DateTime.Now - TotalStaticsLoadStart);
+                NewMsgItem(LogWindow.LogTypes.Warnung, LogWindow.LogThread.Gesamtstatistiken, "Speichern der Gesamtstatistiken abgebrochen!", null);
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty(error))
+                {
+                    log.NewLog(LogWindow.LogTypes.Fehler, LogWindow.LogThread.Gesamtstatistiken, LogWindow.LogActions.Laden, error, DateTime.Now, DateTime.Now - TotalStaticsLoadStart);
+                    NewMsgItem(LogWindow.LogTypes.Fehler, LogWindow.LogThread.Gesamtstatistiken, "Laden der Gesamtstatistiken fehlerhaft!", "Siehe Log");
+                }
+                else
+                {
+                    log.NewLog(LogWindow.LogTypes.Erfolg, LogWindow.LogThread.Gesamtstatistiken, LogWindow.LogActions.Laden, null, DateTime.Now, DateTime.Now - TotalStaticsLoadStart);
+                    NewMsgItem(LogWindow.LogTypes.Erfolg, LogWindow.LogThread.Gesamtstatistiken, "Laden der Gesamtstatistiken erfolgreich!", null);
+                }
+            }
+
+            MainProgBarHide();
+            BuildTotalStatics();
+        }
+
+        private void TotalStaticsLoaderRun(object sender, DoWorkEventArgs e)
+        {
+            TotalStaticsLoadStart = DateTime.Now;
+            string errors = "";
 
             try
             {
@@ -2703,57 +2979,51 @@ namespace SellerScreen
 
                 try
                 {
-                    startDate = staTL.startDate;
+                    StaticsTotalStartDate = staTL.StaticsTotalStartDate;
                 }
                 catch (Exception ex)
                 {
-                    logWindow.NewLog($"Error in Loading StaticsData/Total -> Reading startDate failed! {ex.Message}", 2);
-
+                    errors += $"\nStartdatum, {ex.Message}";
                 }
                 try
                 {
-                    totalCustomers = staTL.totalCustomers;
+                    StaticsTotalCustomers = staTL.StaticsTotalCustomers;
                 }
                 catch (Exception ex)
                 {
-                    logWindow.NewLog($"Error in Loading StaticsData/Total -> Reading totalCustomers failed! {ex.Message}", 2);
-
+                    errors += $"\nKunden, {ex.Message}";
                 }
                 try
                 {
-                    totalSoldProducts = staTL.totalSoldProducts;
+                    StaticsTotalSoldProducts = staTL.StaticsTotalSoldProducts;
                 }
                 catch (Exception ex)
                 {
-                    logWindow.NewLog($"Error in Loading StaticsData/Total -> Reading totalSoldProducts failed! {ex.Message}", 2);
-
+                    errors += $"\nVerkaufte Produkte, {ex.Message}";
                 }
                 try
                 {
-                    totalGottenCash = staTL.totalGottenCash;
+                    StaticsTotalGottenCash = staTL.StaticsTotalGottenCash;
                 }
                 catch (Exception ex)
                 {
-                    logWindow.NewLog($"Error in Loading StaticsData/Total -> Reading totalGottenCash failed! {ex.Message}", 2);
-
+                    errors += $"\nEinnahmen, {ex.Message}";
                 }
                 try
                 {
-                    totalLostCash = staTL.totalLostCash;
+                    StaticsTotalLostCash = staTL.StaticsTotalLostCash;
                 }
                 catch (Exception ex)
                 {
-                    logWindow.NewLog($"Error in Loading StaticsData/Total -> Reading totalLostProducts failed! {ex.Message}", 2);
-
+                    errors += $"\nVerlsute, {ex.Message}";
                 }
                 try
                 {
-                    totalLostProducts = staTL.totalLostProducts;
+                    StaticsTotalLostProducts = staTL.StaticsTotalLostProducts;
                 }
                 catch (Exception ex)
                 {
-                    logWindow.NewLog($"Error in Loading StaticsData/Total -> Reading totalLostProducts failed! {ex.Message}", 2);
-
+                    errors += $"\nRücknahmen, {ex.Message}";
                 }
                 try
                 {
@@ -2761,8 +3031,7 @@ namespace SellerScreen
                 }
                 catch (Exception ex)
                 {
-                    logWindow.NewLog($"Error in Loading StaticsData/Total -> Reading productsNumberList failed! {ex.Message}", 2);
-
+                    errors += $"\nProdukt, Anzahl, {ex.Message}";
                 }
                 try
                 {
@@ -2770,8 +3039,7 @@ namespace SellerScreen
                 }
                 catch (Exception ex)
                 {
-                    logWindow.NewLog($"Error in Loading StaticsData/Total -> Reading productsNameList failed! {ex.Message}", 2);
-
+                    errors += $"\nProdukte, Name, {ex.Message}";
                 }
                 try
                 {
@@ -2779,8 +3047,7 @@ namespace SellerScreen
                 }
                 catch (Exception ex)
                 {
-                    logWindow.NewLog($"Error in Loading StaticsData/Total -> Reading productsCashList failed! {ex.Message}", 2);
-
+                    errors += $"\nProdukte, Einnahmen, {ex.Message}";
                 }
                 try
                 {
@@ -2788,30 +3055,27 @@ namespace SellerScreen
                 }
                 catch (Exception ex)
                 {
-                    logWindow.NewLog($"Error in Loading StaticsData/Total -> Reading productsSinglePriceList failed! {ex.Message}", 2);
-
+                    errors += $"\nProdukte, Einzelpreis, {ex.Message}";
                 }
 
-                for (int i = 0; i < 2; i++)
+                for (int i = 0; i < staTL.StaticsTotalPcUsage.Length; i++)
                 {
                     try
                     {
-                        totalPcTime[i] = staTL.totalPcTime[i];
+                        StaticsTotalPcUsage[i] = staTL.StaticsTotalPcUsage[i];
                     }
                     catch (Exception ex)
                     {
-                        logWindow.NewLog($"Reading StaticsData/Total/totalPcTime{i} failed! {ex.Message}", 2);
-
+                        errors += $"\nPC {i + 1}, Benutzung, {ex.Message}";
                     }
 
                     try
                     {
-                        totalPcUsers[i] = staTL.totalPcUsers[i];
+                        StaticsTotalPcUsers[i] = staTL.StaticsTotalPcUsers[i];
                     }
                     catch (Exception ex)
                     {
-                        logWindow.NewLog($"Reading StaticsData/Total/totalPcUsers{i} failed! {ex.Message}", 2);
-
+                        errors += $"\nPC {i + 1}, Benutzer, {ex.Message}";
                     }
                 }
 
@@ -2823,8 +3087,7 @@ namespace SellerScreen
                     }
                     catch (Exception ex)
                     {
-                        logWindow.NewLog($"Reading StaticsData/Total/mostSoldProductsName{i} failed! {ex.Message}", 2);
-
+                        errors += $"\nBeleibtestes Produkt {i + 1}, Name, {ex.Message}";
                     }
 
                     try
@@ -2833,8 +3096,7 @@ namespace SellerScreen
                     }
                     catch (Exception ex)
                     {
-                        logWindow.NewLog($"Reading StaticsData/Total/mostSoldProductsNumber{i} failed! {ex.Message}", 2);
-
+                        errors += $"\nBeleibtestes Produkt {i + 1}, Anzahl, {ex.Message}";
                     }
 
                     try
@@ -2843,8 +3105,7 @@ namespace SellerScreen
                     }
                     catch (Exception ex)
                     {
-                        logWindow.NewLog($"Reading StaticsData/Total/mostSoldProductsSinglePrice{i} failed! {ex.Message}", 2);
-
+                        errors += $"\nBeleibtestes Produkt {i + 1}, Einzelpreis, {ex.Message}";
                     }
 
                     try
@@ -2853,8 +3114,7 @@ namespace SellerScreen
                     }
                     catch (Exception ex)
                     {
-                        logWindow.NewLog($"Reading StaticsData/Total/highestEarningsProductsName{i} failed! {ex.Message}", 2);
-
+                        errors += $"\nHöchste Einahmen bei Produkt {i + 1}, Name, {ex.Message}";
                     }
 
                     try
@@ -2863,8 +3123,7 @@ namespace SellerScreen
                     }
                     catch (Exception ex)
                     {
-                        logWindow.NewLog($"Reading StaticsData/Total/highestEarningsProductsNumber{i} failed! {ex.Message}", 2);
-
+                        errors += $"\nHöchste Einahmen bei Produkt {i + 1}, Anzahl, {ex.Message}";
                     }
 
                     try
@@ -2873,60 +3132,171 @@ namespace SellerScreen
                     }
                     catch (Exception ex)
                     {
-                        logWindow.NewLog($"Reading StaticsData/Total/highestEarningsProductsSinglePrice{i} failed! {ex.Message}", 2);
-
+                        errors += $"\nHöchste Einahmen bei Produkt {i + 1}, Einzelpreis, {ex.Message}";
                     }
                 }
-
-                for (int i = 0; i < productsNumberList.Length; i++)
-                {
-
-                }
-
-                logWindow.NewLog($"Loading StaticsData/Total successful", 1);
             }
             catch (Exception ex)
             {
-                logWindow.NewLog($"Loading StaticsData/Total failed! {ex.Message}", 2);
-                loadTotalStaticsError = true;
-
+                errors += $"\nLaden, {ex.Message}";
             }
+
+            e.Result = errors;
+        }
+
+        private void TotalStaticsSaverProgress(object sender, ProgressChangedEventArgs e)
+        {
+            MainProgBarShow();
+        }
+
+        private void TotalStaticsSaverComplete(object sender, RunWorkerCompletedEventArgs e)
+        {
+            string error = (string)e.Result;
+
+            if (e.Cancelled)
+            {
+                log.NewLog(LogWindow.LogTypes.Warnung, LogWindow.LogThread.Gesamtstatistiken, LogWindow.LogActions.Speichern, "Abgebrochen", DateTime.Now, DateTime.Now - StorageSaverStart);
+                NewMsgItem(LogWindow.LogTypes.Warnung, LogWindow.LogThread.Gesamtstatistiken, "Speichern der Gesamtstatistiken abgebrochen!", null);
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty(error))
+                {
+                    log.NewLog(LogWindow.LogTypes.Fehler, LogWindow.LogThread.Gesamtstatistiken, LogWindow.LogActions.Speichern, error, DateTime.Now, DateTime.Now - StorageSaverStart);
+                    NewMsgItem(LogWindow.LogTypes.Fehler, LogWindow.LogThread.Gesamtstatistiken, "Speichern der Gesamtstatistiken fehlerhaft!", "Siehe Log");
+                }
+                else
+                {
+                    log.NewLog(LogWindow.LogTypes.Erfolg, LogWindow.LogThread.Gesamtstatistiken, LogWindow.LogActions.Speichern, null, DateTime.Now, DateTime.Now - StorageSaverStart);
+                    NewMsgItem(LogWindow.LogTypes.Erfolg, LogWindow.LogThread.Gesamtstatistiken, "Speichern der Gesamtstatistiken erfolgreich!", null);
+                }
+            }
+
+            MainProgBarHide();
+        }
+
+        private void TotalStaticsSaverRun(object sender, DoWorkEventArgs e)
+        {
+            TotalStaticsSaveStart = DateTime.Now;
+            string error = "";
+            StaticsTotalData staTS = new StaticsTotalData
+            {
+                StaticsTotalStartDate = StaticsTotalStartDate,
+                StaticsTotalCustomers = StaticsTotalCustomers,
+                StaticsTotalSoldProducts = StaticsTotalSoldProducts,
+                StaticsTotalGottenCash = StaticsTotalGottenCash,
+                StaticsTotalLostCash = StaticsTotalLostCash,
+                StaticsTotalLostProducts = StaticsTotalLostProducts,
+                productsNameList = productsNameList,
+                productsNumberList = productsNumberList,
+                productsCashList = productsCashList,
+                productsSinglePriceList = productsSinglePriceList,
+                StaticsTotalPcUsage = StaticsTotalPcUsage,
+                StaticsTotalPcUsers = StaticsTotalPcUsers,
+                StaticsTotalPcName = StaticsTotalPcName,
+                mostSoldProductsName = mostSoldProductsName,
+                mostSoldProductsNumber = mostSoldProductsNumber,
+                mostSoldProductsSinglePrice = mostSoldProductsSinglePrice,
+                highestEarningsProductsName = highestEarningsProductsName,
+                highestEarningsProductsNumber = highestEarningsProductsNumber,
+                highestEarningsProductsSinglePrice = highestEarningsProductsSinglePrice
+            };
+
+            try
+            {
+                staTS.Save();
+                log.NewLog(LogWindow.LogTypes.Erfolg, LogWindow.LogThread.Gesamtstatistiken, LogWindow.LogActions.Speichern, null, DateTime.Now, DateTime.Now - TotalStaticsSaveStart);
+            }
+            catch (Exception ex)
+            {
+                log.NewLog(LogWindow.LogTypes.Fehler, LogWindow.LogThread.Gesamtstatistiken, LogWindow.LogActions.Speichern, ex.Message, DateTime.Now, DateTime.Now - TotalStaticsSaveStart);
+            }
+
+            e.Result = error;
         }
 
         private void BuildTotalStatics()
         {
+            TotalStaticsBuildStart = DateTime.Now;
+            Label lbl;
+
             try
             {
-                StaticsStartTimeLbl.Content = startDate.ToShortDateString();
-                StaticsAllCustomerLbl.Content = totalCustomers.ToString();
-                StaticsAllSoldProductsNumberLbl.Content = totalSoldProducts.ToString();
-                StaticsAllGottenCashNumberLbl.Content = totalGottenCash;
+                StaticsTotalStartTimeLbl.Content = StaticsTotalStartDate.ToShortDateString();
+                StaticsTotalCustomersLbl.Content = StaticsTotalCustomers.ToString();
+                StaticsTotalSoldProductsNumberLbl.Content = StaticsTotalSoldProducts.ToString();
+                StaticsTotalGottenCashNumberLbl.Content = StaticsTotalGottenCash;
                 for (int t = 0; t < 10; t++)
                 {
-                    bool endsWithSearchResult = totalGottenCash.ToString().EndsWith($",{t}", StringComparison.CurrentCultureIgnoreCase);
+                    bool endsWithSearchResult = StaticsTotalGottenCash.ToString().EndsWith($",{t}", StringComparison.CurrentCultureIgnoreCase);
                     if (endsWithSearchResult == true)
                     {
-                        StaticsAllGottenCashNumberLbl.Content += "0";
+                        StaticsTotalGottenCashNumberLbl.Content += "0";
                     }
                 }
-                StaticsAllGottenCashNumberLbl.Content += "€";
+                StaticsTotalGottenCashNumberLbl.Content += "€";
 
-                StaticsAllLostCashNumberLbl.Content = totalLostCash;
+                StaticsTotalLostCashNumberLbl.Content = StaticsTotalLostCash;
                 for (int t = 0; t < 10; t++)
                 {
-                    bool endsWithSearchResult = totalLostCash.ToString().EndsWith($",{t}", StringComparison.CurrentCultureIgnoreCase);
+                    bool endsWithSearchResult = StaticsTotalLostCash.ToString().EndsWith($",{t}", StringComparison.CurrentCultureIgnoreCase);
                     if (endsWithSearchResult == true)
                     {
-                        StaticsAllLostCashNumberLbl.Content += "0";
+                        StaticsTotalLostCashNumberLbl.Content += "0";
                     }
                 }
-                StaticsAllLostCashNumberLbl.Content += "€";
+                StaticsTotalLostCashNumberLbl.Content += "€";
 
-                StaticsAllLostProductsNumberLbl.Content = totalLostProducts.ToString();
-                StaticsTotalPc1TimeLbl.Content = pcTime[0].Hours + "," + pcTime[0].Minutes;
-                StaticsTotalPc2TimeLbl.Content = pcTime[1].Hours + "," + pcTime[1].Minutes;
-                StaticsTotalPc1UserLbl.Content = pcUsers[0].ToString();
-                StaticsTotalPc2UserLbl.Content = pcUsers[1].ToString();
+                StaticsAllLostProductsNumberLbl.Content = StaticsTotalLostProducts.ToString();
+
+                for (int i = 0; i < StaticsTotalPcUsers.Length; i++)
+                {
+                    //StaticsTotalPc0NameLbl;
+                    //StaticsTotalPc0SlotLbl;
+                    //StaticsTotalPc0UsageLbl;
+                    //StaticsTotalPc0UsersLbl;
+
+                    Label slotLbl = new Label
+                    {
+                        Content = (i + 1).ToString(),
+                        Margin = new Thickness(5),
+                        FontWeight = FontWeights.Bold,
+                        HorizontalContentAlignment = HorizontalAlignment.Center,
+                        Name = $"StaticsTotalPc{i}SlotLbl",
+                        Tag = i.ToString()
+                    };
+
+                    Label nameLbl = new Label
+                    {
+                        Content = StaticsTotalPcName[i].ToString(),
+                        Margin = new Thickness(5),
+                        Name = $"StaticsTotalPc{i}NameLbl",
+                        Tag = i.ToString()
+                    };
+
+                    Label usersLbl = new Label
+                    {
+                        Content = StaticsTotalPcUsers[i].ToString(),
+                        Margin = new Thickness(5),
+                        HorizontalContentAlignment = HorizontalAlignment.Center,
+                        Name = $"StaticsTotalPc{i}UsersLbl",
+                        Tag = i.ToString()
+                    };
+
+                    Label usageLbl = new Label
+                    {
+                        Content = StaticsTotalPcUsage[i].ToString(),
+                        Margin = new Thickness(5),
+                        HorizontalContentAlignment = HorizontalAlignment.Center,
+                        Name = $"StaticsTotalPc{i}UsageLbl",
+                        Tag = i.ToString()
+                    };
+                }
+
+                //StaticsTotalPc1TimeLbl.Content = pcTime[0].Hours + "," + pcTime[0].Minutes;
+                //StaticsTotalPc2TimeLbl.Content = pcTime[1].Hours + "," + pcTime[1].Minutes;
+                //StaticsTotalPc1UserLbl.Content = pcUsers[0].ToString();
+                //StaticsTotalPc2UserLbl.Content = pcUsers[1].ToString();
 
                 StaticsAllProductTypesListView.Items.Clear();
                 for (int i = 0; i < productsNameList.Length; i++)
@@ -2939,7 +3309,6 @@ namespace SellerScreen
                 StaticsAllProductTypesNumberLbl.Content = productsNameList.Length.ToString();
 
 
-                Label lbl;
                 for (int i = 0; i < 5; i++)
                 {
                     lbl = (Label)FindName($"StaticsTotalMostSoldProductsName{i}");
@@ -2995,352 +3364,218 @@ namespace SellerScreen
                     }
                     lbl.Content += "€";
                 }
-                logWindow.NewLog($"Building StaticsData/Total successful", 1);
+                log.NewLog(LogWindow.LogTypes.Erfolg, LogWindow.LogThread.Gesamtstatistiken, LogWindow.LogActions.Bauen, null, DateTime.Now, DateTime.Now - TotalStaticsBuildStart);
+                NewMsgItem(LogWindow.LogTypes.Erfolg, LogWindow.LogThread.Gesamtstatistiken, "Bauen der Gesamtstatistiken erfolgreich", null);
             }
             catch (Exception ex)
             {
-                logWindow.NewLog($"Building StaticsData/Total failed! {ex.Message}", 2);
-
-            }
-        }
-
-        private void SaveDayStatics()
-        {
-            try
-            {
-                StaticsDayData staDS = new StaticsDayData
-                {
-                    SoldSlotCash = SoldSlotCash,
-                    SoldSlotNumber = SoldSlotNumber,
-                    SoldSlotName = SoldSlotName,
-                    SoldSlotSinglePrice = SoldSlotSinglePrice,
-                    LostCash = LostCash,
-                    LostProducts = LostProducts,
-                    pcTime = pcTime,
-                    pcUsers = pcUsers,
-                    userList = userList
-                };
-                staDS.Save();
-
-                logWindow.NewLog($"Saving StaticsData/Day successful", 1);
-            }
-            catch (Exception ex)
-            {
-                logWindow.NewLog($"Saving StaticsData/Day failed! {ex.Message}", 2);
-
-            }
-        }
-
-        private void LoadDayStatics(DateTime date)
-        {
-            loadDayStaticsError = false;
-
-            try
-            {
-                StaticsDayData staDL = StaticsDayData.Load(date.Date);
-
-                try
-                {
-                    SoldSlotCash = staDL.SoldSlotCash;
-                }
-                catch (Exception ex)
-                {
-                    logWindow.NewLog($"Error in Loading StaticsData/Day -> Reading SoldSlotCash failed! {ex.Message}", 2);
-
-                    loadDayStaticsError = true;
-                }
-                try
-                {
-                    SoldSlotNumber = staDL.SoldSlotNumber;
-                }
-                catch (Exception ex)
-                {
-                    logWindow.NewLog($"Error in Loading StaticsData/Day -> Reading SoldSlotNumber failed! {ex.Message}", 2);
-
-                    loadDayStaticsError = true;
-                }
-                try
-                {
-                    SoldSlotName = staDL.SoldSlotName;
-                }
-                catch (Exception ex)
-                {
-                    logWindow.NewLog($"Error in Loading StaticsData/Day -> Reading SoldSlotName failed! {ex.Message}", 2);
-
-                    loadDayStaticsError = true;
-                }
-                try
-                {
-                    SoldSlotSinglePrice = staDL.SoldSlotSinglePrice;
-                }
-                catch (Exception ex)
-                {
-                    logWindow.NewLog($"Error in Loading StaticsData/Day -> Reading SoldSlotSinglePrice failed! {ex.Message}", 2);
-
-                    loadDayStaticsError = true;
-                }
-                try
-                {
-                    LostCash = staDL.LostCash;
-                }
-                catch (Exception ex)
-                {
-                    logWindow.NewLog($"Error in Loading StaticsData/Day -> Reading LostCash failed! {ex.Message}", 2);
-
-                    loadDayStaticsError = true;
-                }
-                try
-                {
-                    LostProducts = staDL.LostProducts;
-                }
-                catch (Exception ex)
-                {
-                    logWindow.NewLog($"Error in Loading StaticsData/Day -> Reading LostProducts failed! {ex.Message}", 2);
-
-                    loadDayStaticsError = true;
-                }
-                try
-                {
-                    pcTime = staDL.pcTime;
-                }
-                catch (Exception ex)
-                {
-                    logWindow.NewLog($"Error in Loading StaticsData/Day -> Reading pcTime failed! {ex.Message}", 2);
-
-                    loadDayStaticsError = true;
-                }
-                try
-                {
-                    pcUsers = staDL.pcUsers;
-                }
-                catch (Exception ex)
-                {
-                    logWindow.NewLog($"Error in Loading StaticsData/Day -> Reading pcUsers failed! {ex.Message}", 2);
-
-                    loadDayStaticsError = true;
-                }
-                try
-                {
-                    userList = staDL.userList;
-                }
-                catch (Exception ex)
-                {
-                    logWindow.NewLog($"Error in Loading StaticsData/Day -> Reading userList failed! {ex.Message}", 2);
-
-                    loadDayStaticsError = true;
-                }
-            }
-            catch (Exception ex)
-            {
-                logWindow.NewLog($"Loading StaticsData/Day failed! {ex.Message}", 2);
-
-                loadDayStaticsError = true;
+                log.NewLog(LogWindow.LogTypes.Fehler, LogWindow.LogThread.Gesamtstatistiken, LogWindow.LogActions.Bauen, null, DateTime.Now, DateTime.Now - TotalStaticsBuildStart);
+                NewMsgItem(LogWindow.LogTypes.Fehler, LogWindow.LogThread.Gesamtstatistiken, "Bauen der Gesamtstatistiken fehlgeschlagen", ex.Message);
             }
         }
 
         private void BuildDayStatics()
         {
-            if (loadDayStaticsError == false)
+            DayStaticsBuildStart = DateTime.Now;
+            try
             {
-                try
+                string labelPoint(ChartPoint chartPoint)
                 {
-                    string labelPoint(ChartPoint chartPoint)
-                    {
-                        return string.Format("{0} ({1:P})", chartPoint.Y, chartPoint.Participation);
-                    }
-
-                    SeriesCollection numbers = new SeriesCollection();
-                    SeriesCollection cashs = new SeriesCollection();
-
-                    StaticsDaySlotPanel.Children.Clear();
-                    StaticsDaySlotNamePanel.Children.Clear();
-                    StaticsDaySoldPanel.Children.Clear();
-                    StaticsDayCashPanel.Children.Clear();
-                    StaticsDaySinglePricePanel.Children.Clear();
-
-                    for (int i = 0; i < SoldSlotName.Length; i++)
-                    {
-                        if (!string.IsNullOrEmpty(SoldSlotName[i]))
-                        {
-                            Label lbl = new Label
-                            {
-                                Name = $"StaticsDaySlot{i}SlotLbl",
-                                Tag = i,
-                                Content = i+1,
-                                Margin = new Thickness(5, 5, 0, 5),
-                                VerticalContentAlignment = VerticalAlignment.Center,
-                                FontWeight = FontWeights.Bold
-                            };
-
-                            Label lbl1 = new Label
-                            {
-                                Name = $"StaticsDaySlot{i}NameLbl",
-                                Tag = i,
-                                Content = $"{SoldSlotName[i]}",
-                                Margin = new Thickness(5, 5, 5, 5),
-                                VerticalContentAlignment = VerticalAlignment.Center,
-                            };
-
-                            Label lbl2 = new Label
-                            {
-                                Name = $"StaticsDaySlot{i}SinglePriceLbl",
-                                Tag = i,
-                                Content = $"{SoldSlotSinglePrice[i]}",
-                                Margin = new Thickness(5, 5, 5, 5),
-                                VerticalContentAlignment = VerticalAlignment.Center,
-                                HorizontalContentAlignment = HorizontalAlignment.Center,
-                            };
-
-                            PieSeries series = new PieSeries()
-                            {
-                                Title = "Produkt " + (i+1),
-                                Values = new ChartValues<double> { SoldSlotNumber[i] },
-                                DataLabels = true,
-                                LabelPoint = labelPoint
-                            };
-
-                            for (int t = 0; t < 10; t++)
-                            {
-                                bool endsWithSearchResult = SoldSlotSinglePrice[i].ToString().EndsWith($",{t}", StringComparison.CurrentCultureIgnoreCase);
-                                if (endsWithSearchResult == true)
-                                {
-                                    lbl2.Content += "0";
-                                }
-                            }
-                            lbl2.Content += "€";
-
-                            Label lbl3 = new Label
-                            {
-                                Name = $"StaticsDaySlot{i}NumberLbl",
-                                Tag = i,
-                                Margin = new Thickness(5, 5, 5, 5),
-                                VerticalContentAlignment = VerticalAlignment.Center,
-                                HorizontalContentAlignment = HorizontalAlignment.Center,
-                                Content = $"{SoldSlotNumber[i]}",
-                            };
-
-                            Label lbl4 = new Label
-                            {
-                                Name = $"StaticsDaySlot{i}CashLbl",
-                                Tag = i,
-                                Margin = new Thickness(5, 5, 5, 5),
-                                VerticalContentAlignment = VerticalAlignment.Center,
-                                HorizontalContentAlignment = HorizontalAlignment.Center,
-                                Content = $"{SoldSlotCash[i]}",
-                            };
-
-                            PieSeries series2 = new PieSeries()
-                            {
-                                Title = "Produkt " + (i+1),
-                                Values = new ChartValues<double> { SoldSlotCash[i] },
-                                DataLabels = true,
-                                LabelPoint = labelPoint
-                            };
-
-                            for (int t = 0; t < 10; t++)
-                            {
-                                bool endsWithSearchResult = SoldSlotCash[i].ToString().EndsWith($",{t}", StringComparison.CurrentCultureIgnoreCase);
-                                if (endsWithSearchResult == true)
-                                {
-                                    lbl4.Content += "0";
-                                }
-                            }
-                            lbl4.Content += "€";
-
-                            try
-                            {
-                                UnregisterName(lbl.Name);
-                            }
-                            catch { }
-                            try
-                            {
-                                UnregisterName(lbl1.Name);
-                            }
-                            catch { }
-                            try
-                            {
-                                UnregisterName(lbl2.Name);
-                            }
-                            catch { }
-                            try
-                            {
-                                UnregisterName(lbl3.Name);
-                            }
-                            catch { }
-                            try
-                            {
-                                UnregisterName(lbl4.Name);
-                            }
-                            catch { }
-
-                            RegisterName(lbl.Name, lbl);
-                            RegisterName(lbl1.Name, lbl1);
-                            RegisterName(lbl2.Name, lbl2);
-                            RegisterName(lbl3.Name, lbl3);
-                            RegisterName(lbl4.Name, lbl4);
-
-                            StaticsDaySlotPanel.Children.Add(lbl);
-                            StaticsDaySlotNamePanel.Children.Add(lbl1);
-                            StaticsDaySinglePricePanel.Children.Add(lbl2);
-                            StaticsDaySoldPanel.Children.Add(lbl3);
-                            StaticsDayCashPanel.Children.Add(lbl4);
-
-                            cashs.Add(series2);
-                            numbers.Add(series);
-                        }
-                    }
-
-                    StaticsDayChartOfCash.Series = numbers;
-                    StaticsDayChartOfNumbers.Series = cashs;
-
-                    StaticsDayPc1TimeLbl.Content = pcTime[0].Hours.ToString();
-                    StaticsDayPc2TimeLbl.Content = pcTime[1].Hours.ToString();
-                    StaticsDayPc1UsersLbl.Content = pcUsers[0].ToString();
-                    StaticsDayPc2UsersLbl.Content = pcUsers[1].ToString();
-
-                    StaticsDayPcUsersChart_PC1.Values = new ChartValues<int> { pcUsers[0] };
-                    StaticsDayPcUsersChart_PC2.Values = new ChartValues<int> { pcUsers[1] };
-                    StaticsDayPcTimeChart_PC1.Values = new ChartValues<int> { pcTime[0].Hours };
-                    StaticsDayPcTimeChart_PC2.Values = new ChartValues<int> { pcTime[1].Hours };
-
-                    double gottenCash = 0;
-                    int soldProducts = 0;
-                    for (int i = 0; i < SoldSlotName.Length; i++)
-                    {
-                        gottenCash += SoldSlotCash[i];
-                        soldProducts += SoldSlotNumber[i];
-                    }
-                    StaticsDayGottenCashNumberLbl.Content = $"{gottenCash}";
-                    for (int t = 0; t < 10; t++)
-                    {
-                        bool endsWithSearchResult = gottenCash.ToString().EndsWith($",{t}", StringComparison.CurrentCultureIgnoreCase);
-                        if (endsWithSearchResult == true)
-                        {
-                            StaticsDayGottenCashNumberLbl.Content += "0";
-                        }
-                    }
-                    StaticsDayGottenCashNumberLbl.Content += "€";
-
-                    StaticsDaySoldProductsNumberLbl.Content = $"{soldProducts}";
-                    StaticsDayLostProductsNumberLbl.Content = $"{LostProducts}";
-                    StaticsDayLostCashNumberLbl.Content = $"{LostCash}";
-                    for (int t = 0; t < 10; t++)
-                    {
-                        bool endsWithSearchResult = LostCash.ToString().EndsWith($",{t}", StringComparison.CurrentCultureIgnoreCase);
-                        if (endsWithSearchResult == true)
-                        {
-                            StaticsDayLostCashNumberLbl.Content += "0";
-                        }
-                    }
-                    StaticsDayLostCashNumberLbl.Content += "€";
-
-                    logWindow.NewLog($"Building StaticsData/Day successful", 1);
+                    return string.Format("{0} ({1:P})", chartPoint.Y, chartPoint.Participation);
                 }
-                catch (Exception ex)
+
+                SeriesCollection numbers = new SeriesCollection();
+                SeriesCollection cashs = new SeriesCollection();
+
+                StaticsDaySlotPanel.Children.Clear();
+                StaticsDaySlotNamePanel.Children.Clear();
+                StaticsDaySoldPanel.Children.Clear();
+                StaticsDayCashPanel.Children.Clear();
+                StaticsDaySinglePricePanel.Children.Clear();
+
+                for (int i = 0; i < StaticsDaySoldSlotName.Length; i++)
                 {
-                    logWindow.NewLog($"Building StaticsData/Day failed! {ex.Message}", 2);
+                    if (!string.IsNullOrEmpty(StaticsDaySoldSlotName[i]))
+                    {
+                        Label lbl = new Label
+                        {
+                            Name = $"StaticsDaySlot{i}SlotLbl",
+                            Tag = i,
+                            Content = i + 1,
+                            Margin = new Thickness(5, 5, 0, 5),
+                            VerticalContentAlignment = VerticalAlignment.Center,
+                            FontWeight = FontWeights.Bold
+                        };
 
+                        Label lbl1 = new Label
+                        {
+                            Name = $"StaticsDaySlot{i}NameLbl",
+                            Tag = i,
+                            Content = $"{StaticsDaySoldSlotName[i]}",
+                            Margin = new Thickness(5, 5, 5, 5),
+                            VerticalContentAlignment = VerticalAlignment.Center,
+                        };
+
+                        Label lbl2 = new Label
+                        {
+                            Name = $"StaticsDaySlot{i}SinglePriceLbl",
+                            Tag = i,
+                            Content = $"{StaticsDaySoldSlotSinglePrice[i]}",
+                            Margin = new Thickness(5, 5, 5, 5),
+                            VerticalContentAlignment = VerticalAlignment.Center,
+                            HorizontalContentAlignment = HorizontalAlignment.Center,
+                        };
+
+                        PieSeries series = new PieSeries()
+                        {
+                            Title = "Produkt " + (i + 1),
+                            Values = new ChartValues<double> { StaticsDaySoldSlotNumber[i] },
+                            DataLabels = true,
+                            LabelPoint = labelPoint
+                        };
+
+                        for (int t = 0; t < 10; t++)
+                        {
+                            bool endsWithSearchResult = StaticsDaySoldSlotSinglePrice[i].ToString().EndsWith($",{t}", StringComparison.CurrentCultureIgnoreCase);
+                            if (endsWithSearchResult == true)
+                            {
+                                lbl2.Content += "0";
+                            }
+                        }
+                        lbl2.Content += "€";
+
+                        Label lbl3 = new Label
+                        {
+                            Name = $"StaticsDaySlot{i}NumberLbl",
+                            Tag = i,
+                            Margin = new Thickness(5, 5, 5, 5),
+                            VerticalContentAlignment = VerticalAlignment.Center,
+                            HorizontalContentAlignment = HorizontalAlignment.Center,
+                            Content = $"{StaticsDaySoldSlotNumber[i]}",
+                        };
+
+                        Label lbl4 = new Label
+                        {
+                            Name = $"StaticsDaySlot{i}CashLbl",
+                            Tag = i,
+                            Margin = new Thickness(5, 5, 5, 5),
+                            VerticalContentAlignment = VerticalAlignment.Center,
+                            HorizontalContentAlignment = HorizontalAlignment.Center,
+                            Content = $"{StaticsDaySoldSlotCash[i]}",
+                        };
+
+                        PieSeries series2 = new PieSeries()
+                        {
+                            Title = "Produkt " + (i + 1),
+                            Values = new ChartValues<double> { StaticsDaySoldSlotCash[i] },
+                            DataLabels = true,
+                            LabelPoint = labelPoint
+                        };
+
+                        for (int t = 0; t < 10; t++)
+                        {
+                            bool endsWithSearchResult = StaticsDaySoldSlotCash[i].ToString().EndsWith($",{t}", StringComparison.CurrentCultureIgnoreCase);
+                            if (endsWithSearchResult == true)
+                            {
+                                lbl4.Content += "0";
+                            }
+                        }
+                        lbl4.Content += "€";
+
+                        try
+                        {
+                            UnregisterName(lbl.Name);
+                        }
+                        catch { }
+                        try
+                        {
+                            UnregisterName(lbl1.Name);
+                        }
+                        catch { }
+                        try
+                        {
+                            UnregisterName(lbl2.Name);
+                        }
+                        catch { }
+                        try
+                        {
+                            UnregisterName(lbl3.Name);
+                        }
+                        catch { }
+                        try
+                        {
+                            UnregisterName(lbl4.Name);
+                        }
+                        catch { }
+
+                        RegisterName(lbl.Name, lbl);
+                        RegisterName(lbl1.Name, lbl1);
+                        RegisterName(lbl2.Name, lbl2);
+                        RegisterName(lbl3.Name, lbl3);
+                        RegisterName(lbl4.Name, lbl4);
+
+                        StaticsDaySlotPanel.Children.Add(lbl);
+                        StaticsDaySlotNamePanel.Children.Add(lbl1);
+                        StaticsDaySinglePricePanel.Children.Add(lbl2);
+                        StaticsDaySoldPanel.Children.Add(lbl3);
+                        StaticsDayCashPanel.Children.Add(lbl4);
+
+                        cashs.Add(series2);
+                        numbers.Add(series);
+                    }
                 }
+
+                StaticsDayChartOfCash.Series = numbers;
+                StaticsDayChartOfNumbers.Series = cashs;
+
+                //StaticsDayPc1TimeLbl.Content = pcTime[0].Hours.ToString();
+                //StaticsDayPc2TimeLbl.Content = pcTime[1].Hours.ToString();
+                //StaticsDayPc1UsersLbl.Content = pcUsers[0].ToString();
+                //StaticsDayPc2UsersLbl.Content = pcUsers[1].ToString();
+
+                //StaticsDayPcUsersChart_PC1.Values = new ChartValues<int> { pcUsers[0] };
+                //StaticsDayPcUsersChart_PC2.Values = new ChartValues<int> { pcUsers[1] };
+                //StaticsDayPcTimeChart_PC1.Values = new ChartValues<int> { pcTime[0].Hours };
+                //StaticsDayPcTimeChart_PC2.Values = new ChartValues<int> { pcTime[1].Hours };
+
+                double gottenCash = 0;
+                int soldProducts = 0;
+                for (int i = 0; i < StaticsDaySoldSlotName.Length; i++)
+                {
+                    gottenCash += StaticsDaySoldSlotCash[i];
+                    soldProducts += StaticsDaySoldSlotNumber[i];
+                }
+                StaticsDayGottenCashNumberLbl.Content = $"{gottenCash}";
+                for (int t = 0; t < 10; t++)
+                {
+                    bool endsWithSearchResult = gottenCash.ToString().EndsWith($",{t}", StringComparison.CurrentCultureIgnoreCase);
+                    if (endsWithSearchResult == true)
+                    {
+                        StaticsDayGottenCashNumberLbl.Content += "0";
+                    }
+                }
+                StaticsDayGottenCashNumberLbl.Content += "€";
+
+                StaticsDaySoldProductsNumberLbl.Content = $"{soldProducts}";
+                StaticsDayLostProductsNumberLbl.Content = $"{StaticsDayLostProducts}";
+                StaticsDayLostCashNumberLbl.Content = $"{StaticsDayLostCash}";
+                for (int t = 0; t < 10; t++)
+                {
+                    bool endsWithSearchResult = StaticsDayLostCash.ToString().EndsWith($",{t}", StringComparison.CurrentCultureIgnoreCase);
+                    if (endsWithSearchResult == true)
+                    {
+                        StaticsDayLostCashNumberLbl.Content += "0";
+                    }
+                }
+                StaticsDayLostCashNumberLbl.Content += "€";
+
+                log.NewLog(LogWindow.LogTypes.Erfolg, LogWindow.LogThread.Tagesstatistiken, LogWindow.LogActions.Bauen, null, DateTime.Now, DateTime.Now - DayStaticsBuildStart);
+                NewMsgItem(LogWindow.LogTypes.Erfolg, LogWindow.LogThread.Tagesstatistiken, "Bauen der Tagesstatistiken erfolgreich!", null);
+            }
+            catch (Exception ex)
+            {
+                log.NewLog(LogWindow.LogTypes.Fehler, LogWindow.LogThread.Tagesstatistiken, LogWindow.LogActions.Bauen, ex.Message, DateTime.Now, DateTime.Now - DayStaticsBuildStart);
+                NewMsgItem(LogWindow.LogTypes.Fehler, LogWindow.LogThread.Tagesstatistiken, "Bauen der Tagesstatistiken fehlgeschlagen!", ex.Message);
             }
         }
 
@@ -3365,7 +3600,7 @@ namespace SellerScreen
 
             for (int i = 1; i < 32; i++)
             {
-                if (File.Exists(pathN.staticsFile + $"\\{i}_{month}_{year}.xml"))
+                if (File.Exists(pathN.staticsDayFile + $"\\{i}_{month}_{year}.xml"))
                 {
                     Label lbl = new Label
                     {
@@ -3383,15 +3618,95 @@ namespace SellerScreen
             if (sender is Label lbl)
             {
                 DateTime date = new DateTime(int.Parse(StaticsDayYearUpDown.Value.ToString()), int.Parse(StaticsDayMonthUpDown.Value.ToString()), int.Parse(lbl.Tag.ToString()));
-                LoadDayStatics(date.Date);
-                BuildDayStatics();
+                DayStaticsLoader.RunWorkerAsync(date.Date);
             }
         }
         #endregion
 
         #region Settings
-        private void LoadSettings()
+        private void SettingsSaverProgress(object sender, ProgressChangedEventArgs e)
         {
+            MainProgBarShow();
+        }
+
+        private void SettingsSaverComplete(object sender, RunWorkerCompletedEventArgs e)
+        {
+            string errors = (string)e.Result;
+
+            if (e.Cancelled)
+            {
+                log.NewLog(LogWindow.LogTypes.Warnung, LogWindow.LogThread.Einstellungen, LogWindow.LogActions.Speichern, "Abgebrochen", DateTime.Now, DateTime.Now - SettingsSaveStart);
+                NewMsgItem(LogWindow.LogTypes.Warnung, LogWindow.LogThread.Einstellungen, "Speichern der Einstellungen abgebrochen!", null);
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty(errors))
+                {
+                    log.NewLog(LogWindow.LogTypes.Fehler, LogWindow.LogThread.Einstellungen, LogWindow.LogActions.Speichern, errors, DateTime.Now, DateTime.Now - SettingsSaveStart);
+                    NewMsgItem(LogWindow.LogTypes.Fehler, LogWindow.LogThread.Einstellungen, "Speichern der Einstellungen fehlerhaft!", "Siehe Log");
+                }
+                else
+                {
+                    log.NewLog(LogWindow.LogTypes.Erfolg, LogWindow.LogThread.Einstellungen, LogWindow.LogActions.Speichern, null, DateTime.Now, DateTime.Now - SettingsSaveStart);
+                    NewMsgItem(LogWindow.LogTypes.Erfolg, LogWindow.LogThread.Einstellungen, "Speichern der Einstellungen erfolgreich!", null);
+                }
+            }
+            MainProgBarHide();
+        }
+
+        private void SettingsSaverRun(object sender, DoWorkEventArgs e)
+        {
+            SettingsSaveStart = DateTime.Now;
+            SettingsData setS = new SettingsData();
+
+            try
+            {
+                setS.lastPayDate = lastPayDate;
+                setS.StorageLimitedNumber = StorageLimitedNumber;
+                setS.AppTheme = AppThemeStr;
+                setS.Save();
+            }
+            catch (Exception ex)
+            {
+                e.Result = ex.Message;
+            }
+        }
+
+        private void SettingsLoaderProgress(object sender, ProgressChangedEventArgs e)
+        {
+            MainProgBarShow();
+        }
+
+        private void SettingsLoaderComplete(object sender, RunWorkerCompletedEventArgs e)
+        {
+            string errors = (string)e.Result;
+
+            if (e.Cancelled)
+            {
+                log.NewLog(LogWindow.LogTypes.Warnung, LogWindow.LogThread.Einstellungen, LogWindow.LogActions.Laden, "Abgebrochen", DateTime.Now, DateTime.Now - SettingsLoadStart);
+                NewMsgItem(LogWindow.LogTypes.Warnung, LogWindow.LogThread.Einstellungen, "Laden der Einstellungen abgebrochen!", null);
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty(errors))
+                {
+                    log.NewLog(LogWindow.LogTypes.Fehler, LogWindow.LogThread.Einstellungen, LogWindow.LogActions.Laden, errors, DateTime.Now, DateTime.Now - SettingsLoadStart);
+                    NewMsgItem(LogWindow.LogTypes.Fehler, LogWindow.LogThread.Einstellungen, "Laden der Einstellungen fehlerhaft!", "Siehe Log");
+                }
+                else
+                {
+                    log.NewLog(LogWindow.LogTypes.Erfolg, LogWindow.LogThread.Einstellungen, LogWindow.LogActions.Laden, null, DateTime.Now, DateTime.Now - SettingsLoadStart);
+                    NewMsgItem(LogWindow.LogTypes.Erfolg, LogWindow.LogThread.Einstellungen, "Laden der Einstellungen erfolgreich!", null);
+                    BuildSettings();
+                }
+            }
+            MainProgBarHide();
+        }
+
+        private void SettingsLoaderRun(object sender, DoWorkEventArgs e)
+        {
+            SettingsLoadStart = DateTime.Now;
+            string error = "";
             try
             {
                 SettingsData setL = SettingsData.Load();
@@ -3401,94 +3716,95 @@ namespace SellerScreen
                 }
                 catch (Exception ex)
                 {
-                    logWindow.NewLog($"Error in Loading Settings -> Reading lastPayDate failded! {ex.Message}", 2);
+                    error += $"\nLetzer Verkauf, {ex.Message}";
                 }
                 try
                 {
-                    displayLogTypes = setL.displayLogTypes;
+                    StorageLimitedNumber = setL.StorageLimitedNumber;
                 }
                 catch (Exception ex)
                 {
-                    logWindow.NewLog($"Error in Loading Settings -> Reading displayLogTypes failded! {ex.Message}", 2);
+                    error += $"\nLager-Warn-Limit, {ex.Message}";
                 }
 
                 try
                 {
-                    AppTheme = setL.AppTheme;
+                    AppThemeStr = setL.AppTheme;
                 }
                 catch (Exception ex)
                 {
-                    logWindow.NewLog($"Error in Loading Settings -> Reading AppTheme failded! {ex.Message}", 2);
+                    error += $"\nThema, {ex.Message}";
                 }
-
-                logWindow.NewLog($"Loading Settings successful", 1);
             }
             catch (Exception ex)
             {
-                logWindow.NewLog($"Loading Settings failed! {ex.Message}", 2);
-
+                error += $"\nLaden, {ex.Message}";
             }
-        }
 
-        private void SaveSettings()
-        {
-            SettingsData setS = new SettingsData();
-
-            try
-            {
-                setS.lastPayDate = lastPayDate;
-                setS.displayLogTypes = displayLogTypes;
-                setS.AppTheme = AppTheme;
-                setS.Save();
-                logWindow.NewLog($"Saving Settings successful", 1);
-                logWindow.NewLog($"Settings changed!", 4);
-            }
-            catch (Exception ex)
-            {
-                logWindow.NewLog($"Saving Settings failded! {ex.Message}", 2);
-
-            }
+            e.Result = error;
         }
 
         private void BuildSettings()
         {
+            SettingsBuildStart = DateTime.Now;
             try
             {
-                logWindow.displayLogTypes = displayLogTypes;
-                SettingsLogType0CheckBox.IsChecked = displayLogTypes[0];
-                SettingsLogType1CheckBox.IsChecked = displayLogTypes[1];
-                SettingsLogType2CheckBox.IsChecked = displayLogTypes[2];
-                SettingsLogType3CheckBox.IsChecked = displayLogTypes[3];
-                SettingsLogType4CheckBox.IsChecked = displayLogTypes[4];
+                if (AppThemeStr == "System")
+                {
+                    SettingsDesignSystemTogSw.IsOn = true;
+                    SettingsDesignDarkTogSw.IsOn = false;
+                    SettingsDesignLightTogSw.IsOn = false;
+                }
+                else if (AppThemeStr == "Light")
+                {
+                    SettingsDesignSystemTogSw.IsOn = false;
+                    SettingsDesignDarkTogSw.IsOn = false;
+                    SettingsDesignLightTogSw.IsOn = true;
+                }
+                else if (AppThemeStr == "Dark")
+                {
+                    SettingsDesignSystemTogSw.IsOn = false;
+                    SettingsDesignDarkTogSw.IsOn = true;
+                    SettingsDesignLightTogSw.IsOn = false;
+                }
 
-                logWindow.NewLog($"Building Settings successful", 1);
+                log.NewLog(LogWindow.LogTypes.Erfolg, LogWindow.LogThread.Einstellungen, LogWindow.LogActions.Bauen, null, DateTime.Now, DateTime.Now - SettingsBuildStart);
+                NewMsgItem(LogWindow.LogTypes.Erfolg, LogWindow.LogThread.Einstellungen, "Bauen der Einstellungen erfolgreich!", null);
             }
             catch (Exception ex)
             {
-                logWindow.NewLog($"Building Settings failded! {ex.Message}", 2);
-
+                log.NewLog(LogWindow.LogTypes.Fehler, LogWindow.LogThread.Einstellungen, LogWindow.LogActions.Bauen, ex.Message, DateTime.Now, DateTime.Now - SettingsBuildStart);
+                NewMsgItem(LogWindow.LogTypes.Fehler, LogWindow.LogThread.Einstellungen, "Bauen der Einstellungen fehlgeschlagen!", ex.Message);
             }
         }
 
         private void SettingsSaveBtn_Click(object sender, RoutedEventArgs e)
         {
-            if (MessageBox.Show("Möchten Sie die Einstellungen wirklich speichern?", "Einstellungen speichern", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
-            {
-                displayLogTypes[0] = SettingsLogType0CheckBox.IsChecked.Value;
-                displayLogTypes[1] = SettingsLogType1CheckBox.IsChecked.Value;
-                displayLogTypes[2] = SettingsLogType2CheckBox.IsChecked.Value;
-                displayLogTypes[3] = SettingsLogType3CheckBox.IsChecked.Value;
-                displayLogTypes[4] = SettingsLogType4CheckBox.IsChecked.Value;
+            MsgBox msgBox = new MsgBox("Möchten Sie die Einstellungen wirklich speichern?", "Einstellungen speichern", MsgBox.MsgButtons.YesNo, MsgBox.MsgIcon.Question);
+            msgBox.ShowDialog();
 
-                SaveSettings();
-                LoadSettings();
-                BuildSettings();
+            if (msgBox.DialogResult == true)
+            {
+                if (SettingsDesignSystemTogSw.IsOn == true)
+                {
+                    AppThemeStr = "System";
+                }
+                else if (SettingsDesignLightTogSw.IsOn == true)
+                {
+                    AppThemeStr = "Light";
+                }
+                else if (SettingsDesignDarkTogSw.IsOn == true)
+                {
+                    AppThemeStr = "Dark";
+                }
+
+                SettingsSaver.RunWorkerAsync();
+                SetAppTheme();
             }
         }
 
         private void SettingsCancelBtn_Click(object sender, RoutedEventArgs e)
         {
-            LoadSettings();
             BuildSettings();
         }
 
@@ -3496,38 +3812,27 @@ namespace SellerScreen
         {
             if (MessageBox.Show("Möchten Sie die Einstellungen wirklich auf Werkseinstellungen zurücksetzen?", "Einstellungen wiederherstellen", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
             {
-                logWindow.NewLog("Restoring defaults...", 4);
 
                 lastPayDate = DateTime.Today;
+                StorageLimitedNumber = 10;
+                AppThemeStr = "System";
 
-                displayLogTypes[0] = true;
-                displayLogTypes[1] = false;
-                displayLogTypes[2] = true;
-                displayLogTypes[3] = false;
-                displayLogTypes[4] = true;
-
-                SaveSettings();
-                LoadSettings();
+                SettingsSaver.RunWorkerAsync();
                 BuildSettings();
-
-                logWindow.NewLog("Restored defaults!", 4);
+                log.NewLog(LogWindow.LogTypes.Info, LogWindow.LogThread.Einstellungen, LogWindow.LogActions.Wiederherstellen, null, DateTime.Now, TimeSpan.Zero);
+                NewMsgItem(LogWindow.LogTypes.Info, LogWindow.LogThread.Einstellungen, "Die Einstellungen wurden Wiederhergestellt!", null);
             }
         }
 
         private void StartInstallationBtn_Click(object sender, RoutedEventArgs e)
         {
-            logWindow.NewLog("Starting installation...", 4);
+            AppInstallStart = DateTime.Now;
 
-            logWindow.NewLog("Setting up Settings...", 3);
             lastPayDate = DateTime.Today.AddDays(-1);
-            displayLogTypes[0] = true;
-            displayLogTypes[1] = false;
-            displayLogTypes[2] = true;
-            displayLogTypes[3] = false;
-            displayLogTypes[4] = true;
-            SaveSettings();
+            StorageLimitedNumber = 10;
+            AppThemeStr = "System";
+            SettingsSaver.RunWorkerAsync();
 
-            logWindow.NewLog("Setting up Storage...", 3);
             Array.Resize(ref StorageSlotName, StorageSlotName.Length + 1);
             StorageSlotName[StorageSlotName.Length - 1] = "Default";
 
@@ -3539,42 +3844,88 @@ namespace SellerScreen
 
             Array.Resize(ref StorageSlotPrice, StorageSlotPrice.Length + 1);
             StorageSlotPrice[StorageSlotPrice.Length - 1] = 0;
-            SaveStorage();
+            StorageSaver.RunWorkerAsync();
 
-            logWindow.NewLog("Setting up TotalStatics...", 3);
-            startDate = DateTime.Today;
-            totalCustomers = 0;
-            totalSoldProducts = 0;
-            totalGottenCash = 0;
-            totalLostCash = 0;
-            totalLostProducts = 0;
-            SaveTotalStatics();
+            StaticsTotalStartDate = DateTime.Today;
+            StaticsTotalCustomers = 0;
+            StaticsTotalSoldProducts = 0;
+            StaticsTotalGottenCash = 0;
+            StaticsTotalLostCash = 0;
+            StaticsTotalLostProducts = 0;
+            TotalStaticsSaver.RunWorkerAsync();
 
-            CommissioningModePanel.Visibility = Visibility.Collapsed;
+            InstallationModePanel.Visibility = Visibility.Collapsed;
             TopBar.IsEnabled = true;
-            commissioningMode = false;
-            MessageBox.Show("Die Anwendung wurde aktiviert!", GetAssemblyTitle(), MessageBoxButton.OK, MessageBoxImage.Information);
+            AppInstallationMode = false;
+            log.NewLog(LogWindow.LogTypes.Info, LogWindow.LogThread.Anwendung, LogWindow.LogActions.Aktiviert, null, DateTime.Now, DateTime.Now - AppInstallStart);
+            NewMsgItem(LogWindow.LogTypes.Info, LogWindow.LogThread.Anwendung, $"{GetAssemblyTitle()} wurde aktiviert!", null);
             Reload();
-        }
-
-        private void SendLog_Click(object sender, RoutedEventArgs e)
-        {
-            try
-            {
-                logWindow.SendEmail();
-                logWindow.NewLog("Fertig", 2);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Der Log-Bericht konnte nicht an T-App Germany übermittelt werden. Bitte überprüfen Sie Ihre Internetverbindung!", "ACHTUNG: PCS Fehlerbeicht", MessageBoxButton.OK, MessageBoxImage.Warning, MessageBoxResult.OK, MessageBoxOptions.ServiceNotification);
-                logWindow.NewLog($"Senden: {ex.Message}", 2);
-
-            }
         }
 
         private void RefreshBtn_Click(object sender, RoutedEventArgs e)
         {
             Reload();
+        }
+
+        private void SettingsDesignSystemTogSw_PreviewMouseDown(object sender, MouseButtonEventArgs e)
+        {
+            SettingsDesignDarkTogSw.IsOn = false;
+            SettingsDesignLightTogSw.IsOn = false;
+
+            SettingsDesignSystemTogSw.IsEnabled = false;
+            SettingsDesignDarkTogSw.IsEnabled = true;
+            SettingsDesignLightTogSw.IsEnabled = true;
+        }
+
+        private void SettingsDesignDarkTogSw_PreviewMouseDown(object sender, MouseButtonEventArgs e)
+        {
+            SettingsDesignSystemTogSw.IsOn = false;
+            SettingsDesignLightTogSw.IsOn = false;
+
+            SettingsDesignSystemTogSw.IsEnabled = true;
+            SettingsDesignDarkTogSw.IsEnabled = false;
+            SettingsDesignLightTogSw.IsEnabled = true;
+        }
+
+        private void SettingsDesignLightTogSw_PreviewMouseDown(object sender, MouseButtonEventArgs e)
+        {
+            SettingsDesignSystemTogSw.IsOn = false;
+            SettingsDesignDarkTogSw.IsOn = false;
+
+            SettingsDesignSystemTogSw.IsEnabled = true;
+            SettingsDesignDarkTogSw.IsEnabled = true;
+            SettingsDesignLightTogSw.IsEnabled = false;
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!disposedValue)
+            {
+                if (disposing)
+                {
+                    log.Dispose();
+                    Window.Dispose();
+                    StorageLoader.Dispose();
+                    StorageSaver.Dispose();
+                    TotalStaticsLoader.Dispose();
+                    TotalStaticsSaver.Dispose();
+                    DayStaticsLoader.Dispose();
+                    DayStaticsSaver.Dispose();
+                    SettingsLoader.Dispose();
+                    SettingsSaver.Dispose();
+                }
+
+                // TODO: Nicht verwaltete Ressourcen (nicht verwaltete Objekte) freigeben und Finalizer überschreiben
+                // TODO: Große Felder auf NULL setzen
+                disposedValue = true;
+            }
+        }
+
+        public void Dispose()
+        {
+            // Ändern Sie diesen Code nicht. Fügen Sie Bereinigungscode in der Methode "Dispose(bool disposing)" ein.
+            Dispose(disposing: true);
+            GC.SuppressFinalize(this);
         }
         #endregion
     }

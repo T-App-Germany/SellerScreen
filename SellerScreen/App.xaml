@@ -78,7 +78,7 @@
                                 <Setter Property="Foreground" Value="#888888"/>
                             </Trigger>
                             <Trigger Property="IsChecked" Value="true">
-                                <Setter TargetName="Border" Property="Background" Value="DarkGreen" />
+                                <Setter TargetName="Border" Property="Background" Value="#76a669" />
                                 <Setter TargetName="Border" Property="Opacity" Value="1" />
                             </Trigger>
                         </ControlTemplate.Triggers>

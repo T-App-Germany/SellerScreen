@@ -3,10 +3,10 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:xctk="http://schemas.xceed.com/wpf/xaml/toolkit"
+    xmlns:xctk="http://schemas.xceed.com/wpf/xaml/toolkit" xmlns:toggleswitch="clr-namespace:ToggleSwitch;assembly=ToggleSwitch"
     x:Name="EditStorageSlot_Window" x:Class="SellerScreen.EditStorageSlot"
     mc:Ignorable="d"
-    Title="Produkt bearbeiten" FontSize="15" WindowStartupLocation="CenterScreen" WindowStyle="None" Loaded="Window_Loaded" ResizeMode="NoResize" Height="300" Width="610">
+    Title="Produkt bearbeiten" FontSize="17" WindowStartupLocation="CenterScreen" WindowStyle="None" Loaded="Window_Loaded" ResizeMode="NoResize" Height="300" Width="610">
     <Window.Resources>
         <Style x:Key="WindowMainPanelStyle" TargetType="{x:Type Border}">
             <Setter Property="BorderBrush" Value="{DynamicResource WindowBorderBrush}" />
@@ -30,8 +30,6 @@
                 <Grid x:Name="TextFontColor" Background="White"/>
                 <Grid x:Name="SideBarsColor" Background="#48484A"/>
                 <Grid x:Name="PageBackgroudColor" Background="#FF323232"/>
-                <Grid x:Name="SeperatorColor" Background="White"/>
-                <Grid x:Name="ChromeBtnColor" Background="#FFF6F6F6"/>
                 <Border x:Name="WindowHeight" Height="{Binding Height, ElementName=Window}"/>
             </Grid>
             <StackPanel x:Name="TopBar" Background="{Binding Background, ElementName=SideBarsColor}" VerticalAlignment="Top">
@@ -45,54 +43,11 @@
                 </StackPanel>
                 <StackPanel Orientation="Horizontal">
                     <Label Content="Verfügbar:" VerticalAlignment="Center" Margin="10,10,0,10" FontWeight="Bold"/>
-                    <Label x:Name="NumberLbl" Content="000" VerticalAlignment="Center" MinWidth="100" FontSize="15" Margin="0"/>
+                    <Label x:Name="NumberLbl" Content="000" VerticalAlignment="Center" MinWidth="100" Margin="0"/>
                     <Label Content="Status:" VerticalContentAlignment="Center" Margin="55,10,10,10" FontWeight="Bold"/>
-                    <ToggleButton x:Name="DeactivateBtn" Margin="10" Click="DeactivateBtn_Click">
-                        <StackPanel Orientation="Horizontal">
-                            <Viewbox xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation">
-                                <Rectangle Width="32" Height="32">
-                                    <Rectangle.Fill>
-                                        <DrawingBrush>
-                                            <DrawingBrush.Drawing>
-                                                <DrawingGroup>
-                                                    <DrawingGroup.Children>
-                                                        <GeometryDrawing Brush="#00FFFFFF" Geometry="F1M16,16L0,16 0,0 16,0z" />
-                                                        <GeometryDrawing Brush="#FFF6F6F6" Geometry="F1M3.9591,0.999700000000001L9.99999999997669E-05,7.8567 9.99999999997669E-05,8.1437 3.9591,14.9997 12.0411,14.9997 16.0001,8.1437 16.0001,7.8567 12.0411,0.999700000000001z" />
-                                                        <GeometryDrawing Brush="#FF838383" Geometry="F1M10.8867,13L8.7237,13 12.6157,5.994 13.7737,8z M5.1137,13L4.4047,11.773 9.2797,3 10.8867,3 11.5947,4.227 6.7207,13z M2.2267,8L5.1137,3 7.2767,3 3.3847,10.006z M11.4647,2L4.5347,2 1.0727,8 4.5347,14 11.4647,14 14.9277,8z" />
-                                                        <GeometryDrawing Brush="#FFFFFFFF" Geometry="F1M10.8867,3L9.2797,3 4.4047,11.773 5.1137,13 6.7207,13 11.5947,4.227z M5.1137,3L2.2267,8 3.3847,10.006 7.2767,3z M13.7737,8L10.8867,13 8.7237,13 12.6157,5.994z" />
-                                                    </DrawingGroup.Children>
-                                                </DrawingGroup>
-                                            </DrawingBrush.Drawing>
-                                        </DrawingBrush>
-                                    </Rectangle.Fill>
-                                </Rectangle>
-                            </Viewbox>
-                            <Label Content="Deaktiviert" FontSize="15"/>
-                        </StackPanel>
-                    </ToggleButton>
-                    <ToggleButton x:Name="ActivateBtn"  Margin="10" Click="ActivateBtn_Click">
-                        <StackPanel Orientation="Horizontal">
-                            <Viewbox xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation">
-                                <Rectangle Width="32" Height="32">
-                                    <Rectangle.Fill>
-                                        <DrawingBrush>
-                                            <DrawingBrush.Drawing>
-                                                <DrawingGroup>
-                                                    <DrawingGroup.Children>
-                                                        <GeometryDrawing Brush="#00FFFFFF" Geometry="F1M16,16L0,16 0,0 16,0z" />
-                                                        <GeometryDrawing Brush="#FFF6F6F6" Geometry="F1M3.9591,0.999700000000001L9.99999999997669E-05,7.8567 9.99999999997669E-05,8.1437 3.9591,14.9997 12.0411,14.9997 16.0001,8.1437 16.0001,7.8567 12.0411,0.999700000000001z" />
-                                                        <GeometryDrawing Brush="#FFFFFFFF" Geometry="F1M13.7734,8L10.8864,13 5.1134,13 2.2264,8 5.1134,3 10.8864,3z" />
-                                                        <GeometryDrawing Brush="#FF800080" Geometry="F1M10.8867,13L5.1137,13 2.2267,8 5.1137,3 10.8867,3 13.7737,8z M11.4647,2L4.5347,2 1.0727,8 4.5347,14 11.4647,14 14.9277,8z" />
-                                                    </DrawingGroup.Children>
-                                                </DrawingGroup>
-                                            </DrawingBrush.Drawing>
-                                        </DrawingBrush>
-                                    </Rectangle.Fill>
-                                </Rectangle>
-                            </Viewbox>
-                            <Label Content="Aktiviert" FontSize="15"/>
-                        </StackPanel>
-                    </ToggleButton>
+                    <Viewbox Height="27">
+                        <toggleswitch:ToggleSwitch x:Name="StatusSwitch"/>
+                    </Viewbox>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal">
                     <Label x:Name="AddNumbersTextLbl" Content="Hinzufügen:" VerticalAlignment="Center" Margin="10,10,0,10" FontWeight="Bold"/>
